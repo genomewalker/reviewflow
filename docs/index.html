@@ -717,78 +717,6 @@
         }
 
         /* =====================================================
-           TESTIMONIALS
-           ===================================================== */
-        .testimonials {
-            padding: 100px 0;
-            background: var(--paper-warm);
-            border-top: 1px solid var(--rule);
-        }
-
-        .testimonials-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 32px;
-        }
-
-        .testimonial {
-            background: white;
-            padding: 32px;
-            border: 1px solid var(--rule);
-            border-radius: 6px;
-            position: relative;
-        }
-
-        .testimonial::before {
-            content: '"';
-            position: absolute;
-            top: 20px;
-            left: 24px;
-            font-size: 80px;
-            font-weight: 700;
-            color: var(--paper-dark);
-            line-height: 1;
-            font-family: Georgia, serif;
-        }
-
-        .testimonial-text {
-            font-size: 15px;
-            line-height: 1.7;
-            color: var(--ink-secondary);
-            margin-bottom: 24px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .testimonial-author {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .testimonial-avatar {
-            width: 44px;
-            height: 44px;
-            background: var(--scholar);
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .testimonial-name {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .testimonial-role {
-            font-size: 12px;
-            color: var(--ink-muted);
-        }
-
-        /* =====================================================
            CTA SECTION
            ===================================================== */
         .cta {
@@ -929,10 +857,6 @@
             .step:nth-child(3),
             .step:nth-child(4) {
                 border-top: 1px solid rgba(255,255,255,0.1);
-            }
-
-            .testimonials-grid {
-                grid-template-columns: 1fr;
             }
 
             .footer-grid {
@@ -1229,48 +1153,6 @@
                     <span class="code-line"></span>
                     <span class="code-line code-comment"># Launch</span>
                     <span class="code-line"><span class="code-prompt">$</span> <span class="code-command">reviewflow</span></span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Testimonials -->
-    <section class="testimonials">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-number">04 — FEEDBACK</span>
-                <h2>What researchers say</h2>
-            </div>
-            <div class="testimonials-grid">
-                <div class="testimonial">
-                    <p class="testimonial-text">ReviewFlow cut my revision time in half. The expert panel is brilliant for complex statistical questions I'd usually struggle to articulate.</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">JK</div>
-                        <div>
-                            <div class="testimonial-name">Dr. Jane Kim</div>
-                            <div class="testimonial-role">Genomics Researcher</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial">
-                    <p class="testimonial-text">Finally, a tool that understands academic workflow. The progress tracking keeps me organized across multiple papers under revision.</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">MS</div>
-                        <div>
-                            <div class="testimonial-name">Prof. Marco Silva</div>
-                            <div class="testimonial-role">Environmental Science</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonial">
-                    <p class="testimonial-text">The AI suggestions understand scientific context in a way I didn't expect. It helps me articulate responses more clearly and professionally.</p>
-                    <div class="testimonial-author">
-                        <div class="testimonial-avatar">AL</div>
-                        <div>
-                            <div class="testimonial-name">Dr. Anna Lee</div>
-                            <div class="testimonial-role">Molecular Biology</div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
