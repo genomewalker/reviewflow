@@ -55,7 +55,7 @@ Responding to peer review comments is one of the most time-consuming parts of ac
 - **OpenCode CLI** (for AI features)
 
 ```bash
-npm install -g @anthropic/opencode
+npm i -g opencode-ai
 ```
 
 ### Installation

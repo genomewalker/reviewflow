@@ -589,7 +589,7 @@ ${c.blue}╔${'═'.repeat(width)}╗
 function requireOpenCode() {
     if (!checkOpenCode()) {
         log.error('OpenCode CLI is required but not installed');
-        console.log(`\n  Install with: ${c.cyan}npm install -g @anthropic/opencode${c.reset}\n`);
+        console.log(`\n  Install with: ${c.cyan}npm i -g opencode-ai${c.reset}\n`);
         process.exit(1);
     }
 }

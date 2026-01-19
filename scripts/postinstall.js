@@ -194,7 +194,7 @@ function main() {
 ${c.bold}Setup complete!${c.reset}
 
 ${c.yellow}Prerequisites:${c.reset}
-  - OpenCode CLI must be installed: ${c.cyan}npm install -g @anthropic/opencode${c.reset}
+  - OpenCode CLI must be installed: ${c.cyan}npm i -g opencode-ai${c.reset}
 
 ${c.yellow}Quick start:${c.reset}
   ${c.cyan}reviewflow${c.reset}              Launch the platform (starts server + opens browser)
