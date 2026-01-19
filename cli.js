@@ -428,8 +428,11 @@ function startServer() {
 function stopServer() {
     return new Promise((resolve) => {
         try {
-            // Find and kill the server process
-            const result = execSync('pkill -f "node.*opencode-server.js" 2>/dev/null || true', { encoding: 'utf8' });
+            // Find and kill the server process - match multiple patterns
+            // Could be "node opencode-server.js" or "node reviewflow start" or similar
+            execSync('pkill -f "opencode-server.js" 2>/dev/null || true', { encoding: 'utf8' });
+            execSync('pkill -f "reviewflow start" 2>/dev/null || true', { encoding: 'utf8' });
+            execSync('pkill -f "paper-review start" 2>/dev/null || true', { encoding: 'utf8' });
             // Give it a moment to shut down
             setTimeout(() => resolve(true), 500);
         } catch (e) {
