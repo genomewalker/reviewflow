@@ -5416,6 +5416,7 @@ GUIDELINES:
                                 experts: newExpertData.experts || [],
                                 recommended_response: newExpertData.recommended_response || '',
                                 advice_to_author: newExpertData.advice_to_author || '',
+                                potential_solutions: newExpertData.potential_solutions || [],
                                 regenerated_at: new Date().toISOString()
                             };
 
@@ -5568,6 +5569,7 @@ Use 1-3 experts. Be specific with data. For valid criticisms: agree graciously. 
                 experts: newExpertData.experts || [],
                 recommended_response: newExpertData.recommended_response || '',
                 advice_to_author: newExpertData.advice_to_author || '',
+                potential_solutions: newExpertData.potential_solutions || [],
                 regenerated_at: new Date().toISOString()
             };
 
@@ -5679,6 +5681,65 @@ Use 1-3 experts. Be specific with data. For valid criticisms: agree graciously. 
                 }
             }
             showNotification('Comment not found', 'error');
+        }
+
+        // Toggle AI solution checkbox in the Edit modal
+        function toggleSolutionAI(commentId, solutionIndex) {
+            const aiSolutions = expertDiscussions?.expert_discussions?.[commentId]?.potential_solutions || [];
+
+            // Find the comment to update actions_taken
+            for (const reviewer of reviewData.reviewers) {
+                const comment = reviewer.comments.find(c => c.id === commentId);
+                if (comment) {
+                    if (!comment.actions_taken) comment.actions_taken = [];
+
+                    // Get the solution text
+                    const sol = aiSolutions[solutionIndex] || comment.potential_solutions?.[solutionIndex];
+                    const solText = typeof sol === 'string' ? sol : (sol?.title || sol?.response || '');
+
+                    if (comment.actions_taken.includes(solText)) {
+                        comment.actions_taken = comment.actions_taken.filter(a => a !== solText);
+                    } else {
+                        comment.actions_taken.push(solText);
+                    }
+
+                    // Update display
+                    updateActionsTakenDisplay(comment);
+                    saveProgress();
+                    return;
+                }
+            }
+        }
+
+        // Use AI solution in the Edit modal - copies response to draft textarea
+        function useAiSolution(commentId, solutionIndex) {
+            const aiSolutions = expertDiscussions?.expert_discussions?.[commentId]?.potential_solutions || [];
+
+            if (solutionIndex >= aiSolutions.length) {
+                showNotification('Solution not found', 'error');
+                return;
+            }
+
+            const solution = aiSolutions[solutionIndex];
+
+            // Find the draft textarea in the modal and set the response
+            const draftTextarea = document.getElementById('draft-response');
+            if (draftTextarea) {
+                draftTextarea.value = solution.response;
+                showNotification(`"${solution.title}" applied to draft`, 'success');
+            } else {
+                // Fallback: directly update the comment
+                for (const reviewer of reviewData.reviewers) {
+                    const comment = reviewer.comments.find(c => c.id === commentId);
+                    if (comment) {
+                        comment.draft_response = solution.response;
+                        comment.status = 'in_progress';
+                        saveProgress();
+                        showNotification(`"${solution.title}" applied to ${commentId}`, 'success');
+                        return;
+                    }
+                }
+            }
         }
 
         function copyAllResponses() {
@@ -6858,7 +6919,32 @@ Your response:`;
 
             // Initialize actions_taken if not present
             if (!comment.actions_taken) comment.actions_taken = [];
+
+            // Get AI-generated potential solutions from expertDiscussions first
+            const aiSolutions = expertDiscussions?.expert_discussions?.[commentId]?.potential_solutions || [];
+            // Fall back to local generated solutions if no AI solutions
             if (!comment.potential_solutions) comment.potential_solutions = generatePotentialSolutions(comment);
+
+            // Build solutions HTML - combine AI solutions with local solutions
+            // AI solutions are now simple strings (action items), same as local solutions
+            const allSolutions = aiSolutions.length > 0 ? aiSolutions : comment.potential_solutions;
+            let solutionsHtml = '';
+            if (allSolutions.length > 0) {
+                solutionsHtml = allSolutions.map((sol, idx) => {
+                    // Handle both string solutions and object solutions (legacy)
+                    const solText = typeof sol === 'string' ? sol : (sol.title || sol.response || '');
+                    return `
+                    <label class="rb-solution-item">
+                        <input type="checkbox" class="solution-checkbox"
+                               data-idx="${idx}"
+                               ${comment.actions_taken.includes(solText) ? 'checked' : ''}
+                               onchange="toggleSolutionAI('${commentId}', ${idx})">
+                        <span>${solText}</span>
+                    </label>
+                `}).join('');
+            } else {
+                solutionsHtml = '<p class="rb-empty-text">No suggested solutions for this comment type</p>';
+            }
 
             document.getElementById('modal-content').innerHTML = `
                 <!-- Original Comment - Full Width at Top -->
@@ -6889,18 +6975,10 @@ Your response:`;
                                 <div class="rb-icon-box amber">
                                     <i class="fas fa-lightbulb"></i>
                                 </div>
-                                Potential Solutions
+                                Potential Solutions (check what you've done)
                             </label>
                             <div class="rb-solutions-list" id="solutions-checklist">
-                                ${comment.potential_solutions.length > 0 ? comment.potential_solutions.map((sol, idx) => `
-                                    <label class="rb-solution-item">
-                                        <input type="checkbox" class="solution-checkbox"
-                                               data-idx="${idx}"
-                                               ${comment.actions_taken.includes(sol) ? 'checked' : ''}
-                                               onchange="toggleSolution(${idx})">
-                                        <span>${sol}</span>
-                                    </label>
-                                `).join('') : '<p class="rb-empty-text">No suggested solutions for this comment type</p>'}
+                                ${solutionsHtml}
                             </div>
                             <div style="margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--rule-light);">
                                 <input type="text" id="custom-solution" placeholder="Add custom action..."

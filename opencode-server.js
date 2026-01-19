@@ -1003,11 +1003,22 @@ function loadExpertsFromDB() {
         const discussions = {};
 
         for (const row of rows) {
+            let potential_solutions = JSON.parse(row.potential_solutions || '[]');
+
+            // Create fallback potential_solutions if empty
+            if (!potential_solutions || potential_solutions.length === 0) {
+                potential_solutions = [
+                    "Addressed reviewer concern in revised manuscript",
+                    "Added clarification to relevant section",
+                    "Updated figures/tables as needed"
+                ];
+            }
+
             discussions[row.comment_id] = {
                 experts: JSON.parse(row.experts || '[]'),
                 recommended_response: row.recommended_response,
                 advice_to_author: row.advice_to_author,
-                potential_solutions: JSON.parse(row.potential_solutions || '[]'),
+                potential_solutions: potential_solutions,
                 regenerated_at: row.regenerated_at,
                 type: row.type || 'minor',
                 priority: row.priority || 'medium',
@@ -1146,11 +1157,13 @@ CRITICAL RULES:
    - WRONG: "We will expand..." / "Add more details..."
    - CORRECT: "We have expanded..." / "We added..."
 
-2. potential_solutions = Array of 2-3 DIFFERENT response strategies, from most to least effort:
-   - Each solution has: title (short label), response (formal reply text), effort ("low"/"medium"/"high")
-   - Example solutions: "Quick acknowledgment", "Detailed expansion", "New analysis"
+2. MANDATORY: potential_solutions = Array of 3-5 SHORT action items (one sentence each).
+   - These are actionable tasks the author can check off as completed
+   - Each item should be a short sentence describing what was done
+   - Examples: "Added damage plots to Supplementary Figure S3", "Clarified authentication criteria in Methods", "Revised terminology throughout manuscript"
+   - DO NOT write full paragraphs - keep each item under 15 words
 
-3. recommended_response = The BEST solution's response text (copy from your top potential_solution)
+3. recommended_response = The full formal response text to send to reviewers (2-4 paragraphs, past tense)
 
 4. advice_to_author = INTERNAL NOTES for the author (what to actually change in manuscript)
    - Example: "Add 2-3 sentences in Methods about sample preservation. Update Table S1 with..."
@@ -1158,12 +1171,13 @@ CRITICAL RULES:
 
 5. NEVER use camelCase phrases like "KeyInsight", "CoreFinding", "MainPoint" - write normally.
 
-OUTPUT FORMAT:
+REQUIRED OUTPUT FORMAT (all fields are mandatory):
 {
   "experts":[${expertTemplate}],
   "potential_solutions":[
-    {"title":"Quick fix","response":"We thank...","effort":"low"},
-    {"title":"Thorough revision","response":"We appreciate...","effort":"medium"}
+    "Added damage analysis to Supplementary Figure",
+    "Clarified methodology in Methods section",
+    "Expanded discussion of limitations"
   ],
   "recommended_response":"...",
   "advice_to_author":"..."
@@ -1187,7 +1201,19 @@ OUTPUT FORMAT:
             if (jsonMatch) {
                 try {
                     const analysis = JSON.parse(jsonMatch[0]);
-                    log(`[Expert] Parsed OK for ${comment.id}: ${analysis.experts?.length || 0} experts`);
+
+                    // Ensure potential_solutions exists - create fallback if AI didn't generate it
+                    if (!analysis.potential_solutions || analysis.potential_solutions.length === 0) {
+                        log(`[Expert] No potential_solutions in response for ${comment.id}, creating fallback`);
+                        // Generate basic action items based on comment type/category
+                        analysis.potential_solutions = [
+                            "Addressed reviewer concern in revised manuscript",
+                            "Added clarification to Methods section",
+                            "Updated relevant figures/tables"
+                        ];
+                    }
+
+                    log(`[Expert] Parsed OK for ${comment.id}: ${analysis.experts?.length || 0} experts, ${analysis.potential_solutions?.length || 0} solutions`);
                     return {
                         ...analysis,
                         reviewer_comment: comment.original_text || comment.text,
