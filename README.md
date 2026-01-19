@@ -61,8 +61,8 @@ npm i -g opencode-ai
 ### Installation
 
 ```bash
-# Install globally
-npm install -g reviewflow
+# Install globally from GitHub
+npm i -g github:genomewalker/reviewflow
 
 # Or clone and install locally
 git clone https://github.com/genomewalker/reviewflow.git
