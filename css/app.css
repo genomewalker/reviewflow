@@ -1501,6 +1501,64 @@ a.comment-id:hover,
     background: rgba(255,255,255,0.1);
 }
 
+/* Chat conversation tabs */
+.chat-conversation-tabs {
+    display: flex;
+    gap: var(--sp-1);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--gray-100);
+    border-bottom: 1px solid var(--gray-200);
+    overflow-x: auto;
+}
+
+.chat-conversation-tabs.hidden {
+    display: none;
+}
+
+.chat-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-1) var(--sp-2);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray-600);
+    background: var(--paper);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.chat-tab:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+}
+
+.chat-tab.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+}
+
+.chat-tab-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 9px;
+    font-weight: 600;
+    background: rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+.chat-tab.active .chat-tab-count {
+    background: rgba(255,255,255,0.2);
+}
+
 .chat-messages {
     flex: 1;
     overflow-y: auto;

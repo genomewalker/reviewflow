@@ -43,6 +43,8 @@ const API_BASE = 'http://localhost:3001';
         let chatHistory = [];
         let chatIsOpen = false;
         let chatIsTyping = false;
+        let chatConversations = {};  // Grouped by comment_id: { 'chat': [...], 'knowledge': [...], 'R1.1': [...] }
+        let currentChatContext = 'chat';  // Which conversation is active
 
         // Comment relationship state
         let commentRelationships = {};  // Maps comment ID -> related comment IDs
@@ -293,6 +295,9 @@ const API_BASE = 'http://localhost:3001';
                     // Load expert discussions for this paper
                     await loadExpertDiscussions();
                     console.log('Loaded expert discussions:', Object.keys(expertDiscussions?.expert_discussions || {}).length);
+
+                    // Load chat history for this paper
+                    await loadChatHistoryFromDB();
 
                     // Sync expert data with comments for consistent display
                     syncExpertDataWithComments();
@@ -3043,6 +3048,94 @@ Confirm you understand the webapp context and are ready to help respond to revie
             document.body.insertAdjacentHTML('beforeend', html);
         }
 
+        // Load chat history from database for current paper
+        async function loadChatHistoryFromDB() {
+            if (!currentPaperId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/db/chat/${currentPaperId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.messages) {
+                        // Group messages by comment_id
+                        chatConversations = {};
+                        data.messages.forEach(msg => {
+                            const ctx = msg.comment_id || 'chat';
+                            if (!chatConversations[ctx]) {
+                                chatConversations[ctx] = [];
+                            }
+                            chatConversations[ctx].push({
+                                role: msg.role,
+                                content: msg.content,
+                                timestamp: msg.timestamp
+                            });
+                        });
+
+                        // Set current chat history to the active context
+                        chatHistory = chatConversations[currentChatContext] || [];
+
+                        console.log('Loaded chat history:', {
+                            contexts: Object.keys(chatConversations),
+                            totalMessages: data.messages.length
+                        });
+
+                        // Update conversation tabs UI if it exists
+                        updateConversationTabs();
+                    }
+                }
+            } catch (e) {
+                console.error('Error loading chat history:', e);
+            }
+        }
+
+        // Switch chat context (conversation)
+        function switchChatContext(contextId) {
+            currentChatContext = contextId;
+            chatHistory = chatConversations[contextId] || [];
+
+            // Re-initialize chat display
+            chatInitialized = false;
+            initializeChatMessages();
+
+            // Update tabs UI
+            updateConversationTabs();
+        }
+
+        // Update conversation tabs UI
+        function updateConversationTabs() {
+            const tabsEl = document.getElementById('chat-conversation-tabs');
+            if (!tabsEl) return;
+
+            const contexts = Object.keys(chatConversations);
+            if (contexts.length <= 1) {
+                tabsEl.innerHTML = '';
+                tabsEl.classList.add('hidden');
+                return;
+            }
+
+            tabsEl.classList.remove('hidden');
+
+            // Map context IDs to friendly names
+            const contextNames = {
+                'chat': 'General',
+                'knowledge': 'Knowledge'
+            };
+
+            tabsEl.innerHTML = contexts.map(ctx => {
+                const name = contextNames[ctx] || ctx;
+                const count = chatConversations[ctx].length;
+                const isActive = ctx === currentChatContext;
+                return `
+                    <button onclick="switchChatContext('${ctx}')"
+                        class="chat-tab ${isActive ? 'active' : ''}"
+                        title="${count} messages">
+                        ${name}
+                        <span class="chat-tab-count">${count}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
         // Auto-resize textarea as user types
         function autoResizeChatInput(textarea) {
             textarea.style.height = 'auto';
@@ -3070,6 +3163,10 @@ Confirm you understand the webapp context and are ready to help respond to revie
             showTypingIndicator();
 
             try {
+                // All messages go through OpenCode which has MCP tools available
+                // The AI can use list_data_sources, query_data, search_all_data tools
+                // to access supplementary data from worker sessions
+
                 // Build prompt with comment context if available
                 let fullPrompt = message;
                 let commentId = 'chat';
@@ -3094,6 +3191,7 @@ User question: ${message}`;
                     body: JSON.stringify({
                         prompt: fullPrompt,
                         comment_id: commentId,
+                        paper_id: currentPaperId,
                         model: aiSettings.model,
                         agent: aiSettings.agent,
                         variant: aiSettings.variant
@@ -3111,6 +3209,13 @@ User question: ${message}`;
 
                     // Add to history
                     chatHistory.push({ role: 'assistant', content: assistantMessage });
+
+                    // Update local conversations store
+                    const ctx = commentId || 'chat';
+                    if (!chatConversations[ctx]) chatConversations[ctx] = [];
+                    chatConversations[ctx].push({ role: 'user', content: message });
+                    chatConversations[ctx].push({ role: 'assistant', content: assistantMessage });
+                    updateConversationTabs();
                 } else {
                     const errorData = await response.json().catch(() => ({}));
                     addChatMessage('assistant', `Error: ${errorData.error || 'Failed to get response'}`);

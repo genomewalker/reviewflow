@@ -5,7 +5,8 @@
   "main": "cli.js",
   "bin": {
     "reviewflow": "./cli.js",
-    "paper-review": "./cli.js"
+    "paper-review": "./cli.js",
+    "reviewflow-mcp": "./mcp-knowledge-server.js"
   },
   "scripts": {
     "start": "node cli.js",
@@ -50,6 +51,7 @@
     "db.js",
     "setup.js",
     "opencode-server.js",
+    "mcp-knowledge-server.js",
     "webapp.html",
     "index.html",
     "css/",

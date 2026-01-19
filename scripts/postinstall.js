@@ -108,6 +108,61 @@ function installSkills() {
     return { installed, skipped };
 }
 
+// Register MCP server with OpenCode
+function registerMcpServer() {
+    const OPENCODE_CONFIG_DIR = path.join(os.homedir(), '.config', 'opencode');
+    const OPENCODE_CONFIG_FILE = path.join(OPENCODE_CONFIG_DIR, 'opencode.json');
+
+    // MCP server configuration (OpenCode format)
+    const mcpConfig = {
+        'reviewflow-knowledge': {
+            type: 'local',
+            command: ['reviewflow-mcp'],
+            enabled: true,
+            environment: {
+                REVIEWFLOW_API: 'http://localhost:3001'
+            }
+        }
+    };
+
+    try {
+        // Ensure config directory exists
+        if (!fs.existsSync(OPENCODE_CONFIG_DIR)) {
+            fs.mkdirSync(OPENCODE_CONFIG_DIR, { recursive: true });
+        }
+
+        // Load existing config or create new
+        let config = {};
+        if (fs.existsSync(OPENCODE_CONFIG_FILE)) {
+            try {
+                config = JSON.parse(fs.readFileSync(OPENCODE_CONFIG_FILE, 'utf8'));
+            } catch (e) {
+                // If parsing fails, start fresh
+                config = {};
+            }
+        }
+
+        // Merge MCP servers (OpenCode uses 'mcp' key)
+        if (!config.mcp) {
+            config.mcp = {};
+        }
+
+        // Only add if not already present (don't overwrite user customizations)
+        let added = false;
+        if (!config.mcp['reviewflow-knowledge']) {
+            config.mcp['reviewflow-knowledge'] = mcpConfig['reviewflow-knowledge'];
+            added = true;
+        }
+
+        // Write back
+        fs.writeFileSync(OPENCODE_CONFIG_FILE, JSON.stringify(config, null, 2));
+
+        return { success: true, added };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
+}
+
 // Verify native module (better-sqlite3) works
 function verifyNativeModules() {
     try {
@@ -187,6 +242,18 @@ function main() {
     }
     if (skillResult.skipped.length > 0) {
         console.log(`${c.dim}  Skipped (already exist): ${skillResult.skipped.join(', ')}${c.reset}`);
+    }
+
+    // 4. Register MCP server
+    const mcpResult = registerMcpServer();
+    if (mcpResult.success) {
+        if (mcpResult.added) {
+            console.log(`${c.green}✓${c.reset} Registered MCP server: ${c.cyan}reviewflow-knowledge${c.reset}`);
+        } else {
+            console.log(`${c.dim}  MCP server already registered${c.reset}`);
+        }
+    } else {
+        console.log(`${c.yellow}!${c.reset} Could not register MCP server: ${mcpResult.error}`);
     }
 
     // Print welcome message

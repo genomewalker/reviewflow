@@ -5469,7 +5469,7 @@ except Exception as e:
             req.on('data', chunk => body += chunk);
             req.on('end', async () => {
                 try {
-                    const { prompt, comment_id, model, agent, variant, load_files, file_paths } = JSON.parse(body);
+                    const { prompt, comment_id, paper_id, model, agent, variant, load_files, file_paths } = JSON.parse(body);
 
                     if (!prompt) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -5510,8 +5510,33 @@ except Exception as e:
                         log(`Received ask request for comment: ${comment_id || 'unknown'} (no files)`);
                     }
 
+                    // Check if there are worker sessions with supplementary data
+                    // Add MCP tool context to prompt so AI knows about available tools
+                    let enhancedPrompt = prompt;
+                    if (paper_id) {
+                        const workers = getWorkerSessions(paper_id);
+                        if (workers.length > 0) {
+                            const workerList = workers.map(w => `- ${w.fileName}: ${w.summary || 'supplementary data'}`).join('\n');
+                            enhancedPrompt = `[IMPORTANT: You have MCP tools to access supplementary data. USE THEM when the user asks about data, tables, or specific information.]
+
+Available data sources:
+${workerList}
+
+When the user asks about supplementary data, tables, figures, sources, or specific information from the paper:
+- Use "search_all_data" tool to search across all sources
+- Use "query_data" tool to query a specific file
+- Use "list_data_sources" tool to see what's available
+
+DO NOT just list the files - actually CALL the MCP tools to get the data.
+
+---
+USER REQUEST: ${prompt}`;
+                            log(`Added MCP tool context (${workers.length} workers available)`);
+                        }
+                    }
+
                     // Call OpenCode
-                    const result = await callOpencode(prompt, session, files);
+                    const result = await callOpencode(enhancedPrompt, session, files);
 
                     if (result.error) {
                         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -5533,6 +5558,12 @@ except Exception as e:
                         });
                         saveSession(session);
 
+                        // Save to chat history database if paper_id is provided
+                        if (paper_id) {
+                            saveChatMessageToDB(paper_id, 'user', prompt, comment_id || 'chat');
+                            saveChatMessageToDB(paper_id, 'assistant', result.text, comment_id || 'chat');
+                        }
+
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({
                             success: true,
@@ -5543,6 +5574,191 @@ except Exception as e:
                     }
                 } catch (e) {
                     log(`Error in /ask: ${e.message}`, 'ERROR');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, error: e.message }));
+                }
+            });
+            return;
+        }
+
+        // POST /api/knowledge-query - Smart query that routes to worker sessions
+        // This endpoint coordinates between the main context and worker sessions
+        if (req.method === 'POST' && req.url === '/api/knowledge-query') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', async () => {
+                try {
+                    const { paperId, question, model, agent, variant } = JSON.parse(body);
+
+                    if (!paperId || !question) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'paperId and question required' }));
+                        return;
+                    }
+
+                    // Get paper info and workers
+                    const paper = db ? db.prepare('SELECT * FROM papers WHERE id = ?').get(paperId) : null;
+                    const paperDir = path.join(PROJECT_FOLDER, 'papers', paperId);
+
+                    // Check if paper exists (either in DB or on disk)
+                    if (!paper && !fs.existsSync(paperDir)) {
+                        res.writeHead(404, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: false, error: 'Paper not found' }));
+                        return;
+                    }
+
+                    const workers = getWorkerSessions(paperId);
+
+                    log(`[Knowledge Query] Question: "${question.substring(0, 80)}..." (${workers.length} workers)`);
+
+                    // Save user question to chat history
+                    saveChatMessageToDB(paperId, 'user', question, 'knowledge');
+
+                    // Helper to save response and send
+                    const sendResponse = (responseText, source, extras = {}) => {
+                        // Save assistant response to chat history
+                        saveChatMessageToDB(paperId, 'assistant', responseText, 'knowledge');
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ success: true, response: responseText, source, ...extras }));
+                    };
+
+                    // If no workers, just use the main session with attached files
+                    if (workers.length === 0) {
+                        const contextFiles = [];
+                        const manuscriptPath = path.join(paperDir, 'manuscript.md');
+                        if (fs.existsSync(manuscriptPath)) contextFiles.push(manuscriptPath);
+
+                        const result = await runOpencode({
+                            message: question,
+                            files: contextFiles,
+                            model: model || loadConfig().model,
+                            agent: agent || loadConfig().agent,
+                            variant: variant || 'medium',
+                            timeout: 120000,
+                            cwd: paperDir
+                        });
+
+                        sendResponse(result.output, 'main');
+                        return;
+                    }
+
+                    // Build inventory summary
+                    const inventory = buildWorkerInventory(workers);
+
+                    // First, ask a coordinator to determine which worker(s) to query
+                    const routingPrompt = `You are a data routing coordinator. Based on the user's question and the available data sources, determine which source(s) to query.
+
+AVAILABLE DATA SOURCES:
+${inventory}
+
+USER QUESTION: "${question}"
+
+Respond with ONLY a JSON object listing which file(s) to query and what specific question to ask each:
+{
+  "queries": [
+    {"file": "filename.ext", "question": "specific question for this file"}
+  ]
+}
+
+If the question can be answered from the inventory summaries alone, respond with:
+{"answer": "your answer based on inventory", "queries": []}`;
+
+                    const routingResult = await runOpencode({
+                        message: routingPrompt,
+                        files: [],
+                        model: 'github-copilot/gpt-5-mini',
+                        agent: 'general',
+                        variant: 'low',
+                        timeout: 30000,
+                        cwd: paperDir
+                    });
+
+                    // Parse routing decision
+                    let routing;
+                    try {
+                        const jsonMatch = routingResult.output.match(/\{[\s\S]*\}/);
+                        routing = jsonMatch ? JSON.parse(jsonMatch[0]) : { queries: [] };
+                    } catch (e) {
+                        log(`[Knowledge Query] Failed to parse routing: ${e.message}`, 'WARN');
+                        routing = { queries: [] };
+                    }
+
+                    // If we got a direct answer from inventory
+                    if (routing.answer && (!routing.queries || routing.queries.length === 0)) {
+                        sendResponse(routing.answer, 'inventory');
+                        return;
+                    }
+
+                    // Query the relevant workers
+                    const workerResponses = [];
+                    const modelToUse = model || loadConfig().model;
+                    const agentToUse = agent || loadConfig().agent;
+                    const variantToUse = variant || 'medium';
+
+                    for (const query of (routing.queries || [])) {
+                        const worker = workers.find(w =>
+                            w.fileName.toLowerCase().includes(query.file.toLowerCase()) ||
+                            query.file.toLowerCase().includes(w.fileName.toLowerCase())
+                        );
+
+                        if (worker) {
+                            log(`[Knowledge Query] Querying worker ${worker.fileName}: ${query.question.substring(0, 50)}...`);
+                            const workerResult = await queryWorkerSession(
+                                paperId, worker, query.question, paperDir,
+                                modelToUse, agentToUse, variantToUse
+                            );
+                            workerResponses.push({
+                                file: worker.fileName,
+                                question: query.question,
+                                response: workerResult
+                            });
+                        }
+                    }
+
+                    // If we got worker responses, consolidate them
+                    if (workerResponses.length > 0) {
+                        const consolidationPrompt = `Based on the following data retrieved from supplementary files, answer the user's question.
+
+USER QUESTION: "${question}"
+
+DATA FROM FILES:
+${workerResponses.map(r => `--- ${r.file} ---\n${r.response}`).join('\n\n')}
+
+Provide a clear, consolidated answer:`;
+
+                        const finalResult = await runOpencode({
+                            message: consolidationPrompt,
+                            files: [],
+                            model: modelToUse,
+                            agent: agentToUse,
+                            variant: variantToUse,
+                            timeout: 60000,
+                            cwd: paperDir
+                        });
+
+                        sendResponse(finalResult.output, 'workers', {
+                            workerQueries: workerResponses.map(r => ({ file: r.file, question: r.question }))
+                        });
+                    } else {
+                        // No workers matched, query with main context
+                        const contextFiles = [];
+                        const manuscriptPath = path.join(paperDir, 'manuscript.md');
+                        if (fs.existsSync(manuscriptPath)) contextFiles.push(manuscriptPath);
+
+                        const result = await runOpencode({
+                            message: question,
+                            files: contextFiles,
+                            model: modelToUse,
+                            agent: agentToUse,
+                            variant: variantToUse,
+                            timeout: 120000,
+                            cwd: paperDir
+                        });
+
+                        sendResponse(result.output, 'main');
+                    }
+                } catch (e) {
+                    log(`[Knowledge Query] Error: ${e.message}`, 'ERROR');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: false, error: e.message }));
                 }
