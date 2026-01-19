@@ -3184,7 +3184,10 @@ ${commentChatContext.relatedIds.length > 0 ? `[Related comments: ${commentChatCo
 User question: ${message}`;
                 }
 
-                // Send to OpenCode API
+                // Send to OpenCode API with timeout (3 minutes to allow for AI processing)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+
                 const response = await fetch(`${API_BASE}/ask`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3195,9 +3198,11 @@ User question: ${message}`;
                         model: aiSettings.model,
                         agent: aiSettings.agent,
                         variant: aiSettings.variant
-                    })
+                    }),
+                    signal: controller.signal
                 });
 
+                clearTimeout(timeoutId);
                 hideTypingIndicator();
 
                 if (response.ok) {
@@ -3222,7 +3227,11 @@ User question: ${message}`;
                 }
             } catch (e) {
                 hideTypingIndicator();
-                addChatMessage('assistant', `Error: Could not connect to OpenCode. Make sure the server is running on port 3001.`);
+                if (e.name === 'AbortError') {
+                    addChatMessage('assistant', `Request timed out after 3 minutes. The AI may still be processing - try a simpler question or check server logs.`);
+                } else {
+                    addChatMessage('assistant', `Error: Could not connect to OpenCode. Make sure the server is running on port 3001.`);
+                }
             }
         }
 
