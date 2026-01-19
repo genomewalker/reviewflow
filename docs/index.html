@@ -1146,10 +1146,10 @@
                 </div>
                 <div class="code-body">
                     <span class="code-line code-comment"># Install OpenCode CLI (for AI features)</span>
-                    <span class="code-line"><span class="code-prompt">$</span> <span class="code-command">npm install -g @anthropic/opencode</span></span>
+                    <span class="code-line"><span class="code-prompt">$</span> <span class="code-command">npm i -g opencode-ai</span></span>
                     <span class="code-line"></span>
                     <span class="code-line code-comment"># Install ReviewFlow</span>
-                    <span class="code-line"><span class="code-prompt">$</span> <span class="code-command">npm install -g reviewflow</span></span>
+                    <span class="code-line"><span class="code-prompt">$</span> <span class="code-command">npm i -g reviewflow</span></span>
                     <span class="code-line"></span>
                     <span class="code-line code-comment"># Launch</span>
                     <span class="code-line"><span class="code-prompt">$</span> <span class="code-command">reviewflow</span></span>
@@ -1163,7 +1163,7 @@
         <div class="container">
             <h2>Start responding smarter</h2>
             <p>Join researchers who are transforming their revision workflow.</p>
-            <a href="#install" class="btn btn-primary">Get ReviewFlow Free</a>
+            <a href="#install" class="btn btn-primary">Get ReviewFlow</a>
         </div>
     </section>
 
@@ -1221,8 +1221,8 @@
 
         // Copy code
         function copyCode() {
-            const code = `npm install -g @anthropic/opencode
-npm install -g reviewflow
+            const code = `npm i -g opencode-ai
+npm i -g reviewflow
 reviewflow`;
             navigator.clipboard.writeText(code);
             const btn = document.querySelector('.code-copy');
