@@ -1,0 +1,59 @@
+# Data and user files (don't publish)
+data/
+input/
+output/
+sessions/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+npm-debug.log*
+
+# Session and temporary files
+opencode_session.json
+claude_requests.json
+claude_responses.json
+.opencode_msg_*.md
+opencode-config.json
+platform-config.json
+
+# Dynamic libraries
+*.dylib
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Test files
+_tmp_*/
+test-*.js
+
+# Git
+.git/
+.gitignore
+
+# Documentation (keep README.md)
+docs/
+
+# Development files
+*.md
+!README.md
+
+# Temp processing HTML
+processing.html
+setup-wizard.html
+index-old.html

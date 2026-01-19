@@ -1,0 +1,29 @@
+Paper Review Platform - Input Files
+====================================
+
+Add your files here to use the command-line setup:
+
+1. REQUIRED: Reviews file
+   - reviews.txt (or reviews.pdf, reviews.docx)
+   - The reviewer comments you received from the journal
+
+2. OPTIONAL: Manuscript file
+   - manuscript.pdf (or manuscript.txt, manuscript.docx)
+   - Your submitted paper
+   - Used to extract statistics and data for responses
+
+3. OPTIONAL: supplementary/ folder
+   - Add any supporting data files
+   - The AI can reference these when generating responses
+
+File naming tips:
+- Include "review" in the filename for reviewer comments
+- Include "manuscript" or "paper" for your submission
+- Create a "supplementary" folder for data files
+
+After adding files, run:
+  node setup.js
+
+Or use the web interface:
+  npm start
+  (then open index.html in your browser)

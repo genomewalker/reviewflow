@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Installation - ReviewFlow Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .doc-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            max-width: 1200px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 65px;
+            height: calc(100vh - 65px);
+            overflow-y: auto;
+        }
+        .sidebar h4 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+        .sidebar h4:first-child { margin-top: 0; }
+        .sidebar a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .sidebar a:hover { color: var(--primary); }
+        .sidebar a.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .content {
+            padding: 3rem;
+            max-width: 800px;
+        }
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .content .subtitle {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+        }
+        .content h2 {
+            font-size: 1.5rem;
+            margin: 2.5rem 0 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+        .content h3 {
+            font-size: 1.2rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+        .content p {
+            margin-bottom: 1rem;
+        }
+        .content ul, .content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .content li { margin-bottom: 0.5rem; }
+        .content code {
+            background: #E5E7EB;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+        .code-block {
+            background: var(--darker);
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            background: #374151;
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            color: #9CA3AF;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .code-content {
+            padding: 1rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #E5E7EB;
+            overflow-x: auto;
+        }
+        .code-content .comment { color: #6B7280; }
+        .code-content .command { color: #60A5FA; }
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: #9CA3AF;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+        }
+        .copy-btn:hover { color: white; }
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .alert-info {
+            background: #EEF2FF;
+            border-left: 4px solid var(--primary);
+        }
+        .alert-success {
+            background: #ECFDF5;
+            border-left: 4px solid var(--secondary);
+        }
+        .alert-warning {
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+        }
+        .alert h5 {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .alert p { margin: 0; font-size: 0.95rem; }
+        .platform-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .platform-tab {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .platform-tab.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .platform-content { display: none; }
+        .platform-content.active { display: block; }
+        .requirements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        .requirements-table th, .requirements-table td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+        .requirements-table th {
+            background: #F3F4F6;
+            font-weight: 600;
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a { color: var(--primary); text-decoration: none; }
+        @media (max-width: 768px) {
+            .doc-layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .content { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="ReviewFlow">
+                ReviewFlow Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/reviewflow">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="doc-layout">
+        <aside class="sidebar">
+            <h4>Getting Started</h4>
+            <a href="installation.html" class="active">Installation</a>
+            <a href="quickstart.html">Quick Start</a>
+            <a href="../tutorial.html">Tutorial</a>
+
+            <h4>User Guide</h4>
+            <a href="importing.html">Importing Reviews</a>
+            <a href="ai-features.html">AI Features</a>
+            <a href="exporting.html">Exporting</a>
+            <a href="multi-paper.html">Multi-Paper</a>
+
+            <h4>Configuration</h4>
+            <a href="configuration.html">Configuration</a>
+            <a href="cli-reference.html">CLI Reference</a>
+            <a href="skills.html">AI Skills</a>
+
+            <h4>Reference</h4>
+            <a href="../api/">API Reference</a>
+            <a href="json-format.html">JSON Format</a>
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </aside>
+
+        <main class="content">
+            <h1>Installation</h1>
+            <p class="subtitle">Install ReviewFlow on macOS, Linux, or Windows.</p>
+
+            <h2>Requirements</h2>
+            <table class="requirements-table">
+                <tr>
+                    <th>Requirement</th>
+                    <th>Version</th>
+                    <th>Notes</th>
+                </tr>
+                <tr>
+                    <td>Node.js</td>
+                    <td>18.0.0 or higher</td>
+                    <td>Required for running ReviewFlow</td>
+                </tr>
+                <tr>
+                    <td>npm</td>
+                    <td>8.0.0 or higher</td>
+                    <td>Included with Node.js</td>
+                </tr>
+                <tr>
+                    <td>OpenCode CLI</td>
+                    <td>Latest</td>
+                    <td>Required for AI features</td>
+                </tr>
+            </table>
+
+            <h2>Step 1: Install Node.js</h2>
+            <p>If you don't have Node.js installed, download it from <a href="https://nodejs.org/" target="_blank">nodejs.org</a> or use a package manager:</p>
+
+            <div class="platform-tabs">
+                <button class="platform-tab active" data-platform="macos">macOS</button>
+                <button class="platform-tab" data-platform="linux">Linux</button>
+                <button class="platform-tab" data-platform="windows">Windows</button>
+            </div>
+
+            <div class="platform-content active" id="macos">
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>Terminal</span>
+                        <button class="copy-btn"><i class="far fa-copy"></i></button>
+                    </div>
+                    <div class="code-content">
+<span class="comment"># Using Homebrew</span>
+brew install node
+
+<span class="comment"># Or using nvm (recommended)</span>
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 20
+nvm use 20
+                    </div>
+                </div>
+            </div>
+
+            <div class="platform-content" id="linux">
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>Terminal</span>
+                        <button class="copy-btn"><i class="far fa-copy"></i></button>
+                    </div>
+                    <div class="code-content">
+<span class="comment"># Ubuntu/Debian</span>
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+<span class="comment"># Or using nvm</span>
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 20
+                    </div>
+                </div>
+            </div>
+
+            <div class="platform-content" id="windows">
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>PowerShell (Admin)</span>
+                        <button class="copy-btn"><i class="far fa-copy"></i></button>
+                    </div>
+                    <div class="code-content">
+<span class="comment"># Using Chocolatey</span>
+choco install nodejs
+
+<span class="comment"># Or download from nodejs.org</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2>Step 2: Install OpenCode CLI</h2>
+            <p>OpenCode is required for AI-powered features like response generation and expert panels.</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+npm install -g @anthropic/opencode
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <h5><i class="fas fa-info-circle"></i> API Key Required</h5>
+                <p>After installing OpenCode, you'll need to configure your API key. Run <code>opencode</code> and follow the prompts to set up authentication.</p>
+            </div>
+
+            <h2>Step 3: Install ReviewFlow</h2>
+            <p>Install ReviewFlow globally to use it from anywhere:</p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+npm install -g reviewflow
+                </div>
+            </div>
+
+            <p>This will:</p>
+            <ul>
+                <li>Install ReviewFlow and its dependencies</li>
+                <li>Compile native SQLite bindings for your platform</li>
+                <li>Create the <code>reviewflow</code> command</li>
+                <li>Install AI expert skills to <code>~/.config/opencode/skill/</code></li>
+                <li>Create data directory at <code>~/ReviewFlow/</code></li>
+            </ul>
+
+            <h2>Step 4: Verify Installation</h2>
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn"><i class="far fa-copy"></i></button>
+                </div>
+                <div class="code-content">
+<span class="comment"># Check version</span>
+reviewflow --help
+
+<span class="comment"># Launch ReviewFlow</span>
+reviewflow
+                </div>
+            </div>
+
+            <div class="alert alert-success">
+                <h5><i class="fas fa-check-circle"></i> Success!</h5>
+                <p>If you see the ReviewFlow banner and the browser opens to <code>http://localhost:3001</code>, you're ready to go!</p>
+            </div>
+
+            <h2>Platform-Specific Notes</h2>
+
+            <h3>macOS</h3>
+            <p>You may need Xcode Command Line Tools for native module compilation:</p>
+            <div class="code-block">
+                <div class="code-header"><span>Terminal</span></div>
+                <div class="code-content">xcode-select --install</div>
+            </div>
+
+            <h3>Linux</h3>
+            <p>Install build tools if you see compilation errors:</p>
+            <div class="code-block">
+                <div class="code-header"><span>Terminal</span></div>
+                <div class="code-content">
+<span class="comment"># Ubuntu/Debian</span>
+sudo apt-get install build-essential python3
+
+<span class="comment"># Fedora/RHEL</span>
+sudo dnf groupinstall "Development Tools"
+                </div>
+            </div>
+
+            <h3>Windows</h3>
+            <p>Install Windows Build Tools:</p>
+            <div class="code-block">
+                <div class="code-header"><span>PowerShell (Admin)</span></div>
+                <div class="code-content">npm install -g windows-build-tools</div>
+            </div>
+
+            <h2>Updating</h2>
+            <p>To update ReviewFlow to the latest version:</p>
+            <div class="code-block">
+                <div class="code-header"><span>Terminal</span></div>
+                <div class="code-content">npm update -g reviewflow</div>
+            </div>
+
+            <h2>Uninstalling</h2>
+            <div class="code-block">
+                <div class="code-header"><span>Terminal</span></div>
+                <div class="code-content">
+<span class="comment"># Remove the package</span>
+npm uninstall -g reviewflow
+
+<span class="comment"># Optionally remove data (backup first!)</span>
+rm -rf ~/ReviewFlow
+                </div>
+            </div>
+
+            <div class="alert alert-warning">
+                <h5><i class="fas fa-exclamation-triangle"></i> Warning</h5>
+                <p>Removing <code>~/ReviewFlow</code> will delete all your papers and responses. Export your data first!</p>
+            </div>
+
+            <h2>Next Steps</h2>
+            <ul>
+                <li><a href="quickstart.html">Quick Start Guide</a> - Get started in 5 minutes</li>
+                <li><a href="../tutorial.html">Full Tutorial</a> - Detailed walkthrough</li>
+                <li><a href="configuration.html">Configuration</a> - Customize settings</li>
+            </ul>
+        </main>
+    </div>
+
+    <footer>
+        <p>
+            <a href="index.html">Documentation</a> |
+            <a href="https://github.com/genomewalker/reviewflow">GitHub</a> |
+            <a href="troubleshooting.html">Troubleshooting</a>
+        </p>
+    </footer>
+
+    <script>
+        // Platform tabs
+        document.querySelectorAll('.platform-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.platform-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.platform-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.platform).classList.add('active');
+            });
+        });
+
+        // Copy buttons
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const code = btn.closest('.code-block').querySelector('.code-content').textContent;
+                navigator.clipboard.writeText(code.trim());
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => btn.innerHTML = '<i class="far fa-copy"></i>', 2000);
+            });
+        });
+    </script>
+</body>
+</html>

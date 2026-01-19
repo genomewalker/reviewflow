@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReviewFlow</title>
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+</head>
+<body>
+    <div class="app-container" id="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="index.html" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    All papers
+                </a>
+                <div class="logo">
+                    <div class="logo-icon"><i class="fas fa-pen-nib"></i></div>
+                    <span class="logo-text">ReviewFlow</span>
+                </div>
+            </div>
+
+            <!-- Current Paper -->
+            <div class="sidebar-section">
+                <h3 id="manuscript-title" style="font-size: 14px; font-weight: 500;">Loading...</h3>
+                <p id="paper-field" class="text-muted mt-1" style="font-size: 12px;"></p>
+            </div>
+
+            <!-- Progress -->
+            <div class="sidebar-section">
+                <h3 class="section-title">Progress</h3>
+                <div class="flex flex-col gap-2">
+                    <div class="flex items-center justify-between" style="font-size: 13px;">
+                        <span class="text-secondary">Completed</span>
+                        <span id="completed-count" class="text-success" style="font-weight: 600;">0</span>
+                    </div>
+                    <div class="flex items-center justify-between" style="font-size: 13px;">
+                        <span class="text-secondary">In Progress</span>
+                        <span id="inprogress-count" style="color: var(--scholar); font-weight: 600;">0</span>
+                    </div>
+                    <div class="flex items-center justify-between" style="font-size: 13px;">
+                        <span class="text-secondary">Pending</span>
+                        <span id="pending-count" class="text-warning" style="font-weight: 600;">0</span>
+                    </div>
+                    <div class="progress-bar mt-2">
+                        <div class="progress-fill" id="progress-bar" style="width: 0%"></div>
+                    </div>
+                    <p id="progress-text" class="text-muted" style="font-size: 12px; text-align: center;">0% Complete</p>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="sidebar-section" style="flex: 1;">
+                <ul class="nav-list">
+                    <li class="nav-item"><button onclick="setView('overview')" class="nav-btn" data-view="overview"><i class="fas fa-home"></i><span>Overview</span></button></li>
+                    <li class="nav-item"><button onclick="setView('taskqueue')" class="nav-btn" data-view="taskqueue"><i class="fas fa-tasks"></i><span>Task Queue</span></button></li>
+                    <li class="nav-item"><button onclick="setView('comments')" class="nav-btn" data-view="comments"><i class="fas fa-comments"></i><span>All Comments</span></button></li>
+                    <li class="nav-item"><button onclick="setView('byreviewer')" class="nav-btn" data-view="byreviewer"><i class="fas fa-users"></i><span>By Reviewer</span></button></li>
+                    <li class="nav-item"><button onclick="setView('agents')" class="nav-btn" data-view="agents"><i class="fas fa-robot"></i><span>AI Agents</span></button></li>
+                    <li class="nav-item"><button onclick="setView('experts')" class="nav-btn" data-view="experts"><i class="fas fa-microscope"></i><span>Expert Insights</span></button></li>
+                    <li class="nav-item"><button onclick="setView('export')" class="nav-btn" data-view="export"><i class="fas fa-file-export"></i><span>Export</span></button></li>
+                </ul>
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule);">
+                    <button onclick="openSettingsModal()" class="nav-btn"><i class="fas fa-cog"></i><span>AI Settings</span></button>
+                </div>
+            </nav>
+
+            <!-- AI Context Status -->
+            <div class="sidebar-section" style="border-top: 1px solid var(--rule);">
+                <div id="ai-knowledge-container" class="card" style="background: var(--ochre); color: white; padding: 12px;">
+                    <div class="flex items-center justify-between mb-2">
+                        <span style="font-size: 11px; font-weight: 500;"><i id="ai-knowledge-icon" class="fas fa-exclamation-triangle"></i> AI Knowledge</span>
+                        <span id="context-status-badge" style="font-size: 11px; background: rgba(255,255,255,0.3); padding: 2px 8px;">Not Loaded</span>
+                    </div>
+                    <p id="context-status-text" style="font-size: 11px; opacity: 0.9; margin-bottom: 8px;">Load manuscript & reviews for better AI</p>
+                    <button onclick="openContextModal()" class="btn btn-sm" style="width: 100%; background: rgba(255,255,255,0.2); color: white; border: none;">
+                        <i class="fas fa-book-reader"></i> <span id="context-btn-text">Load Context</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Filters -->
+            <div class="sidebar-section">
+                <h3 class="section-title">Quick Filters</h3>
+                <div class="flex flex-col gap-1">
+                    <button onclick="filterByPriority('high')" class="nav-btn"><span class="status-dot" style="background: var(--rust);"></span>High Priority</button>
+                    <button onclick="filterByPriority('medium')" class="nav-btn"><span class="status-dot" style="background: var(--ochre);"></span>Medium Priority</button>
+                    <button onclick="filterByType('major')" class="nav-btn"><i class="fas fa-exclamation-circle" style="color: var(--purple);"></i>Major Comments</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 id="view-title" style="font-size: 18px; font-weight: 600;">Overview</h2>
+                        <p id="view-subtitle" class="text-muted" style="font-size: 13px;">Manage your manuscript reviews</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div style="position: relative;">
+                            <input type="text" id="search-input" placeholder="Search comments..." class="form-input" style="padding-left: 36px; width: 220px;" onkeyup="searchComments(this.value)">
+                            <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--ink-muted);"></i>
+                        </div>
+                        <div id="autosave-indicator" class="hidden" style="font-size: 12px; color: var(--ink-muted);"><i class="fas fa-check-circle text-success"></i> Saved</div>
+                        <button onclick="openPaperManager()" class="btn btn-secondary btn-sm"><i class="fas fa-folder-tree"></i> Papers</button>
+                    </div>
+                </div>
+            </header>
+            <div id="content-area" class="content-area"></div>
+        </main>
+    </div>
+
+    <!-- Comment Edit Modal -->
+    <div id="comment-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 900px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3">
+                    <div style="width: 36px; height: 36px; background: var(--vermillion); display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-pen-to-square"></i></div>
+                    <div>
+                        <h3 class="modal-title" id="modal-title">Response Builder</h3>
+                        <p class="text-muted" style="font-size: 12px;">Craft your response to reviewer feedback</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="btn-icon"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="background: var(--paper-warm);"><div id="modal-content"></div></div>
+            <div class="modal-footer">
+                <div class="text-muted" style="font-size: 12px;"><i class="fas fa-keyboard"></i> Press <kbd style="background: var(--paper-warm); padding: 2px 6px;">Esc</kbd> to close</div>
+                <div class="flex gap-3">
+                    <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                    <button onclick="saveComment()" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agent Modal -->
+    <div id="agent-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="agent-modal-title">Consult AI Agent</h3>
+                <button onclick="closeAgentModal()" class="btn-icon"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" id="agent-modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Context Loading Modal -->
+    <div id="context-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 700px;">
+            <div class="modal-header" style="background: var(--scholar); color: white;">
+                <h3 class="modal-title" style="color: white;"><i class="fas fa-book-reader"></i> Load AI Context</h3>
+                <div class="flex items-center gap-2">
+                    <button onclick="selectAllFiles()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">Select All</button>
+                    <button onclick="selectNoneFiles()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">Select None</button>
+                    <button onclick="closeContextModal()" class="btn-icon" style="color: white;"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div id="context-files-checkboxes"><div class="text-muted" style="text-align: center; padding: 24px;"><i class="fas fa-spinner fa-spin"></i> Loading available files...</div></div>
+                <div id="context-loading-progress" class="hidden mt-4">
+                    <div class="card" style="background: var(--scholar-light); border-color: var(--scholar);">
+                        <div class="flex items-center gap-3 p-3">
+                            <i class="fas fa-spinner fa-spin" style="color: var(--scholar);"></i>
+                            <div>
+                                <div style="font-weight: 500; color: var(--scholar);">Loading Files into AI Memory...</div>
+                                <div id="context-loading-status" class="text-muted" style="font-size: 13px;">Initializing...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background: var(--paper-warm);">
+                <div class="flex items-center gap-4">
+                    <span id="selected-files-info" style="font-size: 13px; font-weight: 500;">0 files (0 B)</span>
+                    <div class="flex items-center gap-2" style="font-size: 12px;">
+                        <span id="context-status-indicator" class="status-dot" style="background: var(--ink-muted);"></span>
+                        <span id="context-detail-status" class="text-muted">No context loaded</span>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="clearContext()" class="btn btn-sm text-danger" style="background: transparent;"><i class="fas fa-trash"></i> Clear</button>
+                    <button onclick="closeContextModal()" class="btn btn-secondary btn-sm">Cancel</button>
+                    <button onclick="loadContext()" id="load-context-main-btn" class="btn btn-primary btn-sm"><i class="fas fa-download"></i> Load Selected</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Reviews Modal -->
+    <div id="import-reviews-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header" style="background: var(--purple); color: white;">
+                <h3 class="modal-title" style="color: white;"><i class="fas fa-file-import"></i> Import & Parse Reviews with AI</h3>
+                <button onclick="closeImportReviewsModal()" class="btn-icon" style="color: white;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="import-step-content-1">
+                    <div class="form-group">
+                        <label class="form-label">Paste Raw Reviewer Comments</label>
+                        <textarea id="raw-reviews-input" class="form-textarea" rows="10" placeholder="Paste the complete reviewer comments here..."></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="form-group"><label class="form-label">Reviewer ID</label><input type="text" id="reviewer-id-input" class="form-input" value="R1" placeholder="R1, R2, etc."></div>
+                        <div class="form-group"><label class="form-label">Reviewer Name</label><input type="text" id="reviewer-name-input" class="form-input" value="Referee #1" placeholder="Referee #1"></div>
+                    </div>
+                </div>
+                <div id="import-step-content-2" class="hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 style="font-weight: 500;">Extracted Comments</h4>
+                        <span id="extracted-count" class="text-muted" style="font-size: 13px;">0 comments found</span>
+                    </div>
+                    <div id="extracted-comments-list" class="card" style="max-height: 300px; overflow-y: auto;"></div>
+                </div>
+                <div id="import-step-content-3" class="hidden" style="text-align: center; padding: 32px;">
+                    <i class="fas fa-brain" style="font-size: 48px; color: #d8b4fe; margin-bottom: 16px;"></i>
+                    <h4 style="font-weight: 500; margin-bottom: 8px;">Generate Expert Analysis</h4>
+                    <p class="text-muted">AI will analyze each comment and generate recommended responses.</p>
+                </div>
+                <div id="import-processing" class="hidden mt-4">
+                    <div class="card" style="background: var(--purple-light); border-color: var(--purple);">
+                        <div class="flex items-center gap-3 p-3">
+                            <i class="fas fa-spinner fa-spin" style="color: var(--purple);"></i>
+                            <div>
+                                <div style="font-weight: 500; color: var(--purple);">Processing with AI...</div>
+                                <div id="import-processing-status" class="text-muted" style="font-size: 13px;">Extracting comments...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="prevImportStep()" id="import-prev-btn" class="btn btn-secondary btn-sm hidden"><i class="fas fa-arrow-left"></i> Back</button>
+                <div class="flex gap-2" style="margin-left: auto;">
+                    <button onclick="closeImportReviewsModal()" class="btn btn-secondary btn-sm">Cancel</button>
+                    <button onclick="nextImportStep()" id="import-next-btn" class="btn btn-sm" style="background: var(--purple); color: white;"><i class="fas fa-magic"></i> Extract Comments</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-cog"></i> AI Settings</h3>
+                <button onclick="closeSettingsModal()" class="btn-icon"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label class="form-label">Model</label><select id="settings-model" class="form-select"><option value="github-copilot/gpt-5.2">GPT-5.2 (Copilot)</option><option value="openai/gpt-5.2-codex">GPT-5.2 Codex</option></select></div>
+                <div class="form-group"><label class="form-label">Agent</label><select id="settings-agent" class="form-select"><option value="general">General</option><option value="plan">Plan</option><option value="build">Build</option></select></div>
+                <div class="form-group"><label class="form-label">Reasoning Effort</label><select id="settings-variant" class="form-select"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="max">Max</option></select></div>
+
+                <!-- Session Info -->
+                <div class="settings-divider"></div>
+                <div class="settings-section-title">Session</div>
+                <div class="session-info-row">
+                    <div class="session-info-item">
+                        <span class="session-info-label">Session ID</span>
+                        <code id="settings-session-id" class="session-id-display">Loading...</code>
+                    </div>
+                    <div class="session-info-item">
+                        <span class="session-info-label">Messages</span>
+                        <span id="settings-message-count" class="session-message-count">0</span>
+                    </div>
+                </div>
+                <button onclick="resetSession()" class="btn btn-ghost btn-sm session-reset-btn">
+                    <i class="fas fa-rotate-right"></i> Reset Session
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeSettingsModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="saveSettings()" class="btn btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Manager Modal (handles all paper operations) -->
+    <div id="project-manager-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 900px; max-height: 85vh;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-folder-tree"></i> Papers</h3>
+                <button id="project-manager-close" onclick="closeProjectManager()" class="btn-icon"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <!-- Stats -->
+                <div class="flex items-center gap-6" style="padding: 16px 20px; background: var(--paper-warm); border-bottom: 1px solid var(--rule);">
+                    <div style="text-align: center;"><div id="pm-total-papers" style="font-size: 20px; font-weight: 600;">0</div><div class="text-muted" style="font-size: 11px;">Papers</div></div>
+                    <div style="text-align: center;"><div id="pm-in-progress" style="font-size: 20px; font-weight: 600; color: var(--scholar);">0</div><div class="text-muted" style="font-size: 11px;">In Progress</div></div>
+                    <div style="text-align: center;"><div id="pm-completed" style="font-size: 20px; font-weight: 600; color: var(--sage);">0</div><div class="text-muted" style="font-size: 11px;">Completed</div></div>
+                    <div style="text-align: center;"><div id="pm-total-comments" style="font-size: 20px; font-weight: 600;">0</div><div class="text-muted" style="font-size: 11px;">Comments</div></div>
+                </div>
+                <!-- Tabs -->
+                <div class="flex items-center gap-2" style="padding: 12px 20px; background: var(--paper-warm);">
+                    <button id="tab-papers" onclick="showPapersTab()" class="btn btn-sm btn-secondary">Papers <span id="papers-count-badge" class="badge badge-inprogress" style="margin-left: 4px;">0</span></button>
+                    <button id="tab-trash" onclick="showTrashTab()" class="btn btn-sm" style="background: transparent; color: var(--ink-muted);"><i class="fas fa-trash"></i> Trash <span id="trash-count-badge" class="badge badge-pending hidden" style="margin-left: 4px;">0</span></button>
+                    <button id="add-paper-btn" onclick="showAddPaperForm()" class="btn btn-sm btn-primary" style="margin-left: auto;"><i class="fas fa-plus"></i> Add Paper</button>
+                </div>
+                <!-- Papers Grid -->
+                <div id="papers-grid" class="grid grid-cols-2 gap-3" style="padding: 20px; max-height: 400px; overflow-y: auto;"></div>
+                <!-- Empty State -->
+                <div id="papers-empty" class="hidden" style="padding: 48px; text-align: center;"><i class="fas fa-folder-open" style="font-size: 32px; color: var(--ink-muted); margin-bottom: 12px;"></i><p class="text-muted">No papers yet. Add one to get started.</p></div>
+                <!-- Trash Section -->
+                <div id="trash-section" class="hidden" style="padding: 20px;">
+                    <div id="trash-grid" class="grid grid-cols-2 gap-3"></div>
+                    <div id="trash-empty" class="hidden" style="padding: 48px; text-align: center;"><i class="fas fa-trash" style="font-size: 32px; color: var(--ink-muted); margin-bottom: 12px;"></i><p class="text-muted">Trash is empty</p></div>
+                </div>
+                <!-- Add Paper Form -->
+                <div id="add-paper-form" class="hidden" style="padding: 20px; border-top: 1px solid var(--rule);">
+                    <h4 style="font-weight: 500; margin-bottom: 16px;">Add New Paper</h4>
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="card" style="padding: 16px; text-align: center; cursor: pointer; border: 2px dashed var(--rule);" id="dropzone-manuscript" ondragover="handleCategoryDragOver(event, 'manuscript')" ondragleave="handleCategoryDragLeave(event, 'manuscript')" ondrop="handleCategoryDrop(event, 'manuscript')">
+                            <i class="fas fa-file-lines" style="font-size: 24px; color: var(--ink-muted); margin-bottom: 8px;"></i>
+                            <div style="font-weight: 500; font-size: 13px;">Manuscript</div>
+                            <div id="dropzone-manuscript-empty" class="text-muted" style="font-size: 11px;">.docx or .pdf</div>
+                            <div id="files-manuscript"></div>
+                            <input type="file" id="file-input-manuscript" style="display: none;" accept=".docx,.pdf" onchange="handleCategoryFileSelect(event, 'manuscript')">
+                        </div>
+                        <div class="card" style="padding: 16px; text-align: center; cursor: pointer; border: 2px dashed var(--rule);" id="dropzone-review" ondragover="handleCategoryDragOver(event, 'review')" ondragleave="handleCategoryDragLeave(event, 'review')" ondrop="handleCategoryDrop(event, 'review')">
+                            <i class="fas fa-comments" style="font-size: 24px; color: var(--ink-muted); margin-bottom: 8px;"></i>
+                            <div style="font-weight: 500; font-size: 13px;">Reviews</div>
+                            <div id="dropzone-review-empty" class="text-muted" style="font-size: 11px;">Reviewer comments</div>
+                            <div id="files-review"></div>
+                            <input type="file" id="file-input-review" style="display: none;" accept=".docx,.pdf,.txt" multiple onchange="handleCategoryFileSelect(event, 'review')">
+                        </div>
+                        <div class="card" style="padding: 16px; text-align: center; cursor: pointer; border: 2px dashed var(--rule);" id="dropzone-supplementary" ondragover="handleCategoryDragOver(event, 'supplementary')" ondragleave="handleCategoryDragLeave(event, 'supplementary')" ondrop="handleCategoryDrop(event, 'supplementary')">
+                            <i class="fas fa-table" style="font-size: 24px; color: var(--ink-muted); margin-bottom: 8px;"></i>
+                            <div style="font-weight: 500; font-size: 13px;">Supplementary</div>
+                            <div id="dropzone-supplementary-empty" class="text-muted" style="font-size: 11px;">.xlsx, other files</div>
+                            <div id="files-supplementary"></div>
+                            <input type="file" id="file-input-supplementary" style="display: none;" multiple onchange="handleCategoryFileSelect(event, 'supplementary')">
+                        </div>
+                    </div>
+                    <div id="extraction-summary" class="hidden card mb-4" style="background: var(--scholar-light); border-color: var(--scholar);"></div>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="form-group"><label class="form-label">Title</label><input type="text" id="new-paper-title" class="form-input" placeholder="Paper title"></div>
+                        <div class="form-group"><label class="form-label">Authors</label><input type="text" id="new-paper-authors" class="form-input" placeholder="Author names"></div>
+                        <div class="form-group"><label class="form-label">Journal</label><input type="text" id="new-paper-journal" class="form-input" placeholder="Journal name"></div>
+                        <div class="form-group"><label class="form-label">Field</label><input type="text" id="new-paper-field" class="form-input" placeholder="Research field"></div>
+                    </div>
+                    <div class="flex gap-2" style="justify-content: flex-end;">
+                        <button onclick="hideAddPaperForm()" class="btn btn-secondary">Cancel</button>
+                        <button id="create-paper-btn" onclick="createNewPaperWithFiles()" class="btn btn-primary" disabled><i class="fas fa-plus"></i> Create Paper</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clean Start Modal -->
+    <div id="clean-start-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-redo"></i> Clean Start</h3>
+                <button onclick="closeCleanStartModal()" class="btn-icon"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Choose what to reset:</p>
+                <div class="flex flex-col gap-2">
+                    <label class="flex items-center gap-2" style="font-size: 14px;"><input type="radio" name="clean-option" value="responses" onchange="handleCleanOptionChange()">Clear responses only</label>
+                    <label class="flex items-center gap-2" style="font-size: 14px;"><input type="radio" name="clean-option" value="all" onchange="handleCleanOptionChange()">Re-extract all comments from files</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeCleanStartModal()" class="btn btn-secondary">Cancel</button>
+                <button id="clean-start-confirm-btn" onclick="confirmCleanStart()" class="btn btn-danger" disabled><i class="fas fa-redo"></i> Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal (unified) -->
+    <div id="progress-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title" id="progress-modal-title"><i class="fas fa-cog fa-spin"></i> Processing...</h3>
+                <button id="progress-close-btn" onclick="hideProgress()" class="btn-icon hidden"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="progress-step" style="font-size: 14px; font-weight: 500; margin-bottom: 4px;">Initializing...</div>
+                <div id="progress-detail" class="text-muted" style="font-size: 12px; margin-bottom: 16px;"></div>
+                <div class="progress-bar mb-3"><div class="progress-fill" id="progress-modal-bar" style="width: 0%;"></div></div>
+                <div class="flex items-center justify-between" style="font-size: 12px;">
+                    <span id="progress-count" class="text-muted"></span>
+                    <span id="progress-modal-status" style="font-weight: 600;">0%</span>
+                </div>
+                <div id="progress-modal-logs" style="max-height: 150px; overflow-y: auto; font-size: 11px; font-family: 'IBM Plex Mono', monospace; background: var(--paper-warm); padding: 8px; margin-top: 12px; color: var(--ink-muted);"></div>
+                <div id="progress-cancel-container" class="hidden mt-4">
+                    <button onclick="cancelProgress()" class="btn btn-secondary w-full"><i class="fas fa-times"></i> Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Widget (floating, for background tasks) -->
+    <div id="progress-widget" class="hidden">
+        <div class="progress-header">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-cog fa-spin"></i>
+                <span id="progress-widget-title" style="font-size: 13px; font-weight: 500;">Processing...</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <button onclick="toggleProgressWidget()" class="btn-icon" style="color: var(--paper); opacity: 0.7;"><i class="fas fa-minus"></i></button>
+                <button id="progress-close-widget-btn" onclick="closeProgressWidget()" class="btn-icon" style="color: var(--paper); opacity: 0.7;"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="progress-body">
+            <div class="flex items-center justify-between mb-2">
+                <span id="progress-current-step" style="font-size: 13px; color: var(--ink-secondary);">Initializing...</span>
+                <span id="progress-widget-percent" style="font-size: 13px; font-weight: 600;">0%</span>
+            </div>
+            <div class="progress-bar mb-3"><div id="progress-widget-bar" class="progress-fill" style="width: 0%;"></div></div>
+            <div id="progress-widget-log" style="max-height: 120px; overflow-y: auto; font-size: 11px; font-family: 'IBM Plex Mono', monospace; background: var(--paper-warm); padding: 8px; color: var(--ink-muted);"></div>
+        </div>
+        <div id="progress-fab-percent" style="display: none;"></div>
+    </div>
+
+
+    <!-- Bottom Action Bar -->
+    <div id="bottom-bar" class="bottom-bar">
+        <!-- Go to Top -->
+        <button id="go-to-top" class="bottom-bar-btn" onclick="scrollToTop()" title="Back to top">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+
+        <!-- Processing Status (shows spinner when active, click to expand) -->
+        <button id="processing-btn" class="bottom-bar-btn hidden" onclick="toggleProcessingPanel()" title="Background tasks">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span id="processing-count" class="processing-badge">0</span>
+        </button>
+
+        <!-- Help -->
+        <button id="help-btn" class="bottom-bar-btn" onclick="openHelpModal()" title="Help & Documentation">
+            <i class="fas fa-question"></i>
+        </button>
+
+        <!-- Chat -->
+        <button id="chat-fab" class="bottom-bar-btn" onclick="toggleChat()" title="AI Assistant">
+            <i class="fas fa-comment"></i>
+        </button>
+    </div>
+
+    <!-- Chat Window (popup above bottom bar) -->
+    <div id="chat-window" class="chat-window hidden">
+        <div class="chat-header">
+            <h3><i class="fas fa-robot"></i> AI Assistant</h3>
+            <div class="flex gap-2">
+                <button onclick="clearChatHistory()" class="btn-icon" title="Clear chat"><i class="fas fa-trash"></i></button>
+                <button onclick="toggleChat()" class="btn-icon" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div id="chat-clear-confirm" class="chat-clear-confirm">
+            <span>Clear chat history?</span>
+            <button onclick="confirmClearChat()" class="btn btn-sm btn-danger">Clear</button>
+            <button onclick="cancelClearChat()" class="btn btn-sm btn-secondary">Cancel</button>
+        </div>
+        <div class="chat-input-area">
+            <textarea id="chat-input" class="chat-input" rows="1" placeholder="Ask about your reviews..." onkeydown="handleChatKeydown(event)"></textarea>
+            <button onclick="sendChatMessage()" class="btn btn-primary" style="width: 38px; height: 38px; padding: 0;"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Processing Panel (popup showing all background tasks) -->
+    <div id="processing-panel" class="processing-panel hidden">
+        <div class="processing-panel-header">
+            <span><i class="fas fa-tasks"></i> Background Tasks</span>
+            <button onclick="toggleProcessingPanel()" class="btn-icon"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="processing-list" class="processing-list">
+            <div class="processing-empty">No active tasks</div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 800px; max-height: 90vh;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #4F46E5, #7C3AED); color: white;">
+                <div class="flex items-center gap-3">
+                    <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div>
+                        <h3 class="modal-title" style="color: white;">Help & Documentation</h3>
+                        <p style="font-size: 12px; opacity: 0.9; margin: 0;">Learn how to use ReviewFlow</p>
+                    </div>
+                </div>
+                <button onclick="closeHelpModal()" class="btn-icon" style="color: white;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 0; overflow-y: auto; max-height: calc(90vh - 140px);">
+                <!-- Quick Start -->
+                <div style="padding: 24px; background: linear-gradient(135deg, #EEF2FF, #F5F3FF);">
+                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-rocket" style="color: #4F46E5;"></i> Quick Start</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                        <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #E5E7EB;">
+                            <div style="font-size: 24px; margin-bottom: 8px;">1</div>
+                            <strong>Import Reviews</strong>
+                            <p style="font-size: 13px; color: #6B7280; margin-top: 4px;">Click "Process Paper" and paste or upload your reviewer comments</p>
+                        </div>
+                        <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #E5E7EB;">
+                            <div style="font-size: 24px; margin-bottom: 8px;">2</div>
+                            <strong>Load Context</strong>
+                            <p style="font-size: 13px; color: #6B7280; margin-top: 4px;">Load your manuscript for better AI responses</p>
+                        </div>
+                        <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #E5E7EB;">
+                            <div style="font-size: 24px; margin-bottom: 8px;">3</div>
+                            <strong>Review & Export</strong>
+                            <p style="font-size: 13px; color: #6B7280; margin-top: 4px;">Edit AI drafts and export your responses</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features Guide -->
+                <div style="padding: 24px;">
+                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-compass" style="color: #10B981;"></i> Feature Guide</h4>
+
+                    <div class="help-section" style="margin-bottom: 20px;">
+                        <h5 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 28px; height: 28px; background: #EEF2FF; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #4F46E5;"><i class="fas fa-tasks"></i></span>
+                            Task Queue
+                        </h5>
+                        <p style="font-size: 13px; color: #4B5563; margin-left: 36px;">Your main workspace. Shows all comments organized by priority. Click any comment to edit your response.</p>
+                    </div>
+
+                    <div class="help-section" style="margin-bottom: 20px;">
+                        <h5 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 28px; height: 28px; background: #ECFDF5; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #10B981;"><i class="fas fa-robot"></i></span>
+                            AI Agents
+                        </h5>
+                        <p style="font-size: 13px; color: #4B5563; margin-left: 36px;">Specialized AI assistants for different tasks: methodology expert, statistical expert, literature expert, and writing expert.</p>
+                    </div>
+
+                    <div class="help-section" style="margin-bottom: 20px;">
+                        <h5 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 28px; height: 28px; background: #FEF3C7; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #F59E0B;"><i class="fas fa-microscope"></i></span>
+                            Expert Insights
+                        </h5>
+                        <p style="font-size: 13px; color: #4B5563; margin-left: 36px;">View AI-generated expert panel discussions for each comment. Get multiple response strategies with different effort levels.</p>
+                    </div>
+
+                    <div class="help-section" style="margin-bottom: 20px;">
+                        <h5 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 28px; height: 28px; background: #FCE7F3; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #EC4899;"><i class="fas fa-lightbulb"></i></span>
+                            Potential Solutions
+                        </h5>
+                        <p style="font-size: 13px; color: #4B5563; margin-left: 36px;">Each comment gets 2-3 response strategies: Quick (low effort), Detailed (medium), and Thorough (high effort). Click "Use This" to apply.</p>
+                    </div>
+
+                    <div class="help-section" style="margin-bottom: 20px;">
+                        <h5 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                            <span style="width: 28px; height: 28px; background: #E0E7FF; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #6366F1;"><i class="fas fa-file-export"></i></span>
+                            Export
+                        </h5>
+                        <p style="font-size: 13px; color: #4B5563; margin-left: 36px;">Generate Word documents with all your responses formatted for journal submission. Also supports JSON backup.</p>
+                    </div>
+                </div>
+
+                <!-- Keyboard Shortcuts -->
+                <div style="padding: 24px; background: #F9FAFB; border-top: 1px solid #E5E7EB;">
+                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-keyboard" style="color: #6B7280;"></i> Keyboard Shortcuts</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 13px;">Close modal</span>
+                            <kbd style="background: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; border: 1px solid #D1D5DB;">Esc</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 13px;">Search</span>
+                            <kbd style="background: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; border: 1px solid #D1D5DB;">Ctrl+F</kbd>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 13px;">Save changes</span>
+                            <kbd style="background: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; border: 1px solid #D1D5DB;">Ctrl+S</kbd>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Links -->
+                <div style="padding: 24px; border-top: 1px solid #E5E7EB;">
+                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-external-link-alt" style="color: #4F46E5;"></i> Resources</h4>
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                        <a href="https://genomewalker.github.io/reviewflow" target="_blank" style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #EEF2FF; border-radius: 8px; text-decoration: none; color: #4F46E5; font-size: 13px; font-weight: 500;">
+                            <i class="fas fa-globe"></i> Documentation
+                        </a>
+                        <a href="https://genomewalker.github.io/reviewflow/tutorial" target="_blank" style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #ECFDF5; border-radius: 8px; text-decoration: none; color: #10B981; font-size: 13px; font-weight: 500;">
+                            <i class="fas fa-graduation-cap"></i> Tutorial
+                        </a>
+                        <a href="https://github.com/genomewalker/reviewflow" target="_blank" style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #F3F4F6; border-radius: 8px; text-decoration: none; color: #374151; font-size: 13px; font-weight: 500;">
+                            <i class="fab fa-github"></i> GitHub
+                        </a>
+                        <a href="https://github.com/genomewalker/reviewflow/issues" target="_blank" style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #FEF3C7; border-radius: 8px; text-decoration: none; color: #B45309; font-size: 13px; font-weight: 500;">
+                            <i class="fas fa-bug"></i> Report Issue
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background: #F9FAFB;">
+                <div style="font-size: 12px; color: #6B7280;">
+                    <i class="fas fa-heart" style="color: #EC4899;"></i> Made for researchers
+                </div>
+                <button onclick="closeHelpModal()" class="btn btn-primary">Got it!</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

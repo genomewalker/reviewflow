@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Data and user files
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+npm-debug.log*
+
+# Session and temporary files
+opencode_session.json
+claude_requests.json
+claude_responses.json
+.opencode_msg_*.md
+
+# Dynamic libraries (build artifacts)
+*.dylib
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Test files
+_tmp_*/
+
+# Build output
+dist/
+build/

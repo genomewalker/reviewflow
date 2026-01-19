@@ -1,0 +1,30 @@
+{
+  "manuscript": {
+    "title": "Enter manuscript title here",
+    "authors": "Enter authors here",
+    "submission_date": "",
+    "review_date": ""
+  },
+  "reviewers": [
+    {
+      "id": "R1",
+      "name": "Referee #1",
+      "expertise": "Enter expertise area",
+      "overall_assessment": "Enter overall assessment",
+      "comments": [
+        {
+          "id": "R1-1",
+          "type": "major",
+          "category": "Category",
+          "location": "Line/Section reference",
+          "original_text": "Paste reviewer comment here",
+          "draft_response": "",
+          "status": "pending",
+          "priority": "high",
+          "requires_new_analysis": false,
+          "analysis_type": []
+        }
+      ]
+    }
+  ]
+}

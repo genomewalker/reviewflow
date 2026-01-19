@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReviewFlow</title>
+    <link rel="stylesheet" href="css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-pen-nib"></i>
+                </div>
+                <span class="logo-text">ReviewFlow</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <!-- Upload section -->
+        <section class="upload-section">
+            <h2 class="section-title">New paper</h2>
+            <div class="upload-grid">
+                <div class="upload-box" id="box-manuscript" data-type="manuscript">
+                    <div class="upload-box-icon">
+                        <i class="fas fa-file-lines"></i>
+                    </div>
+                    <div class="upload-box-title">Manuscript</div>
+                    <div class="upload-box-desc">.docx or .pdf</div>
+                    <div class="upload-box-files" id="files-manuscript"></div>
+                </div>
+
+                <div class="upload-box" id="box-reviews" data-type="reviews">
+                    <div class="upload-box-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <div class="upload-box-title">Reviews</div>
+                    <div class="upload-box-desc">.docx with reviewer comments</div>
+                    <div class="upload-box-files" id="files-reviews"></div>
+                </div>
+
+                <div class="upload-box" id="box-supplementary" data-type="supplementary">
+                    <div class="upload-box-icon">
+                        <i class="fas fa-table"></i>
+                    </div>
+                    <div class="upload-box-title">Supplementary</div>
+                    <div class="upload-box-desc">.xlsx, .pdf, or other files</div>
+                    <div class="upload-box-files" id="files-supplementary"></div>
+                </div>
+            </div>
+
+            <input type="file" id="input-manuscript" accept=".docx,.pdf,.doc">
+            <input type="file" id="input-reviews" accept=".docx,.doc,.pdf" multiple>
+            <input type="file" id="input-supplementary" accept="*" multiple>
+
+            <!-- AI Configuration -->
+            <div class="ai-config" id="ai-config">
+                <div class="ai-config-header" onclick="toggleAiConfig()">
+                    <span><i class="fas fa-robot"></i> AI settings</span>
+                    <i class="fas fa-chevron-down ai-config-chevron" id="ai-config-chevron"></i>
+                </div>
+                <div class="ai-config-body" id="ai-config-body">
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label>Model</label>
+                            <select id="config-model">
+                                <option value="github-copilot/gpt-5.2">GPT-5.2 (Copilot)</option>
+                                <option value="openai/gpt-5.2-codex">GPT-5.2 Codex</option>
+                                <option value="anthropic/claude-sonnet">Claude Sonnet</option>
+                                <option value="anthropic/claude-opus">Claude Opus</option>
+                            </select>
+                        </div>
+                        <div class="config-field">
+                            <label>Agent</label>
+                            <select id="config-agent">
+                                <option value="general">General</option>
+                                <option value="plan">Plan</option>
+                                <option value="build">Build</option>
+                                <option value="explore">Explore</option>
+                            </select>
+                        </div>
+                        <div class="config-field">
+                            <label>Effort</label>
+                            <select id="config-variant">
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high" selected>High</option>
+                                <option value="max">Max</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="upload-actions">
+                <button class="btn btn-secondary" id="clear-btn" disabled onclick="clearFiles()">
+                    Clear
+                </button>
+                <button class="btn btn-primary" id="upload-btn" disabled onclick="uploadFiles()">
+                    <i class="fas fa-arrow-right"></i>
+                    Process paper
+                </button>
+            </div>
+        </section>
+
+        <!-- Papers list -->
+        <section class="papers-section">
+            <h2 class="section-title">Papers</h2>
+            <div id="papers-container">
+                <div class="loading" id="loading-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Trash section -->
+        <section class="trash-section" id="trash-section" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-trash-alt"></i> Trash
+                <span class="trash-count" id="trash-count"></span>
+            </h2>
+            <div id="trash-container" class="papers-grid"></div>
+        </section>
+    </main>
+
+    <!-- Delete Modal (move to trash) -->
+    <div id="delete-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 400px; text-align: center; padding: var(--sp-6);">
+            <div class="modal-icon warning" style="width: 60px; height: 60px; margin: 0 auto var(--sp-4); background: var(--ochre-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-trash" style="font-size: 24px; color: var(--ochre);"></i>
+            </div>
+            <div class="modal-title" style="font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600; margin-bottom: var(--sp-2);">Move to trash?</div>
+            <div class="modal-text" style="color: var(--ink-muted); margin-bottom: var(--sp-6);">This paper will be moved to trash. You can restore it later.</div>
+            <div class="modal-actions" style="display: flex; gap: var(--sp-3); justify-content: center;">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-ochre" onclick="confirmDelete()">Move to trash</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permanent Delete Modal -->
+    <div id="permanent-delete-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 400px; text-align: center; padding: var(--sp-6);">
+            <div class="modal-icon" style="width: 60px; height: 60px; margin: 0 auto var(--sp-4); background: var(--rust-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: var(--rust);"></i>
+            </div>
+            <div class="modal-title" style="font-family: var(--font-display); font-size: var(--text-xl); font-weight: 600; margin-bottom: var(--sp-2);">Permanently delete?</div>
+            <div class="modal-text" style="color: var(--ink-muted); margin-bottom: var(--sp-6);">This cannot be undone. All data will be permanently removed.</div>
+            <div class="modal-actions" style="display: flex; gap: var(--sp-3); justify-content: center;">
+                <button class="btn btn-secondary" onclick="closePermanentDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmPermanentDelete()">Delete forever</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+
+        const files = {
+            manuscript: [],
+            reviews: [],
+            supplementary: []
+        };
+
+        let paperToDelete = null;
+        let paperToPermanentDelete = null;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPapers();
+            loadTrash();
+            loadModels();
+            setupDropzones();
+        });
+
+        async function loadModels() {
+            try {
+                const response = await fetch(`${API_BASE}/models`);
+                const data = await response.json();
+
+                // Handle nested format: data.models.list or data.models
+                const modelList = data.models?.list || data.models || [];
+
+                if (modelList.length > 0) {
+                    // Group models by provider
+                    const byProvider = {};
+                    for (const m of modelList) {
+                        const provider = m.provider || 'other';
+                        if (!byProvider[provider]) byProvider[provider] = [];
+                        byProvider[provider].push(m);
+                    }
+
+                    // Sort providers: prioritize github-copilot, openai, anthropic
+                    const providerOrder = ['github-copilot', 'openai', 'anthropic', 'google', 'opencode'];
+                    const sortedProviders = Object.keys(byProvider).sort((a, b) => {
+                        const aIdx = providerOrder.indexOf(a);
+                        const bIdx = providerOrder.indexOf(b);
+                        if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+                        if (aIdx === -1) return 1;
+                        if (bIdx === -1) return -1;
+                        return aIdx - bIdx;
+                    });
+
+                    const select = document.getElementById('config-model');
+                    select.innerHTML = sortedProviders.map(provider => {
+                        const models = byProvider[provider];
+                        const options = models.map(m => {
+                            const label = m.name || m.id.split('/').pop();
+                            return `<option value="${m.id}">${escapeHtml(label)}</option>`;
+                        }).join('');
+                        return `<optgroup label="${escapeHtml(provider)}">${options}</optgroup>`;
+                    }).join('');
+
+                    // Set default - prefer gpt-5 or copilot
+                    const preferred = modelList.find(m =>
+                        m.id.includes('gpt-5') && m.id.includes('copilot')
+                    ) || modelList.find(m =>
+                        m.id.includes('gpt-5')
+                    );
+                    if (preferred) {
+                        select.value = preferred.id;
+                    }
+                }
+            } catch (error) {
+                console.log('Could not load models, using defaults');
+            }
+        }
+
+        function setupDropzones() {
+            ['manuscript', 'reviews', 'supplementary'].forEach(type => {
+                const box = document.getElementById(`box-${type}`);
+                const input = document.getElementById(`input-${type}`);
+
+                box.addEventListener('click', () => input.click());
+
+                box.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    box.classList.add('dragover');
+                });
+
+                box.addEventListener('dragleave', () => {
+                    box.classList.remove('dragover');
+                });
+
+                box.addEventListener('drop', e => {
+                    e.preventDefault();
+                    box.classList.remove('dragover');
+                    addFiles(type, e.dataTransfer.files);
+                });
+
+                input.addEventListener('change', e => {
+                    addFiles(type, e.target.files);
+                    input.value = '';
+                });
+            });
+        }
+
+        function addFiles(type, fileList) {
+            for (const file of fileList) {
+                if (!files[type].find(f => f.name === file.name)) {
+                    files[type].push(file);
+                }
+            }
+            renderFiles();
+            updateButtons();
+        }
+
+        function removeFile(type, index) {
+            files[type].splice(index, 1);
+            renderFiles();
+            updateButtons();
+        }
+
+        function renderFiles() {
+            ['manuscript', 'reviews', 'supplementary'].forEach(type => {
+                const box = document.getElementById(`box-${type}`);
+                const container = document.getElementById(`files-${type}`);
+
+                if (files[type].length > 0) {
+                    box.classList.add('has-files');
+                    container.innerHTML = files[type].map((file, i) => `
+                        <div class="upload-file-item">
+                            <i class="fas ${getFileIcon(file.name)}"></i>
+                            <span>${escapeHtml(file.name)}</span>
+                            <span class="remove" onclick="event.stopPropagation(); removeFile('${type}', ${i})">
+                                <i class="fas fa-times"></i>
+                            </span>
+                        </div>
+                    `).join('');
+                } else {
+                    box.classList.remove('has-files');
+                    container.innerHTML = '';
+                }
+            });
+        }
+
+        function updateButtons() {
+            const hasFiles = files.manuscript.length > 0 || files.reviews.length > 0 || files.supplementary.length > 0;
+            document.getElementById('upload-btn').disabled = !hasFiles;
+            document.getElementById('clear-btn').disabled = !hasFiles;
+        }
+
+        function clearFiles() {
+            files.manuscript = [];
+            files.reviews = [];
+            files.supplementary = [];
+            renderFiles();
+            updateButtons();
+        }
+
+        function toggleAiConfig() {
+            const body = document.getElementById('ai-config-body');
+            const chevron = document.getElementById('ai-config-chevron');
+            body.classList.toggle('show');
+            chevron.classList.toggle('open');
+        }
+
+        function getAiConfig() {
+            return {
+                model: document.getElementById('config-model').value,
+                agent: document.getElementById('config-agent').value,
+                variant: document.getElementById('config-variant').value
+            };
+        }
+
+        async function uploadFiles() {
+            const btn = document.getElementById('upload-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+
+            try {
+                const formData = new FormData();
+
+                // Add files
+                files.manuscript.forEach(f => formData.append('manuscript', f, f.name));
+                files.reviews.forEach(f => formData.append('reviews', f, f.name));
+                files.supplementary.forEach(f => formData.append('supplementary', f, f.name));
+
+                // Add AI config
+                const aiConfig = getAiConfig();
+                formData.append('ai_config', JSON.stringify(aiConfig));
+
+                const response = await fetch(`${API_BASE}/api/setup/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.paper_id) {
+                    // Go to processing page
+                    window.location.href = `processing.html?paper=${data.paper_id}`;
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Upload failed:', error);
+                alert('Failed to upload: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-arrow-right"></i> Process paper';
+            }
+        }
+
+        async function loadPapers() {
+            try {
+                const response = await fetch(`${API_BASE}/api/papers`);
+                const data = await response.json();
+
+                const container = document.getElementById('papers-container');
+
+                if (data.papers && data.papers.length > 0) {
+                    container.innerHTML = `<div class="papers-grid">${data.papers.map(renderPaperCard).join('')}</div>`;
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>No papers yet. Upload files above to get started.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load papers:', error);
+                document.getElementById('papers-container').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Failed to connect to server</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadTrash() {
+            try {
+                const response = await fetch(`${API_BASE}/api/papers/trash`);
+                const data = await response.json();
+
+                const section = document.getElementById('trash-section');
+                const container = document.getElementById('trash-container');
+                const countEl = document.getElementById('trash-count');
+
+                if (data.papers && data.papers.length > 0) {
+                    section.style.display = 'block';
+                    countEl.textContent = `(${data.papers.length})`;
+                    container.innerHTML = data.papers.map(renderTrashCard).join('');
+                } else {
+                    section.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to load trash:', error);
+            }
+        }
+
+        function renderTrashCard(paper) {
+            const title = paper.title || 'Untitled paper';
+            const deletedDate = new Date(paper.deleted_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+
+            return `
+                <div class="paper-card" style="opacity: 0.7;">
+                    <div class="paper-info">
+                        <div class="paper-title">${escapeHtml(title)}</div>
+                        <div class="paper-meta">Deleted ${deletedDate}</div>
+                    </div>
+                    <div class="paper-actions">
+                        <button class="paper-btn paper-btn-open" onclick="restorePaper('${paper.id}')" title="Restore">
+                            <i class="fas fa-undo"></i> Restore
+                        </button>
+                        <button class="paper-btn paper-btn-delete" onclick="openPermanentDeleteModal('${paper.id}')" title="Delete forever">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function restorePaper(paperId) {
+            try {
+                await fetch(`${API_BASE}/api/papers/${paperId}/restore`, { method: 'POST' });
+                loadPapers();
+                loadTrash();
+            } catch (error) {
+                console.error('Failed to restore:', error);
+                alert('Failed to restore paper');
+            }
+        }
+
+        function openPermanentDeleteModal(paperId) {
+            paperToPermanentDelete = paperId;
+            document.getElementById('permanent-delete-modal').classList.remove('hidden');
+        }
+
+        function closePermanentDeleteModal() {
+            paperToPermanentDelete = null;
+            document.getElementById('permanent-delete-modal').classList.add('hidden');
+        }
+
+        async function confirmPermanentDelete() {
+            if (!paperToPermanentDelete) return;
+
+            try {
+                await fetch(`${API_BASE}/api/papers/${paperToPermanentDelete}/permanent`, { method: 'DELETE' });
+                closePermanentDeleteModal();
+                loadTrash();
+            } catch (error) {
+                console.error('Failed to permanently delete:', error);
+                alert('Failed to delete paper');
+            }
+        }
+
+        function renderPaperCard(paper) {
+            const statusClass = {
+                'uploaded': 'status-uploaded',
+                'parsing': 'status-processing',
+                'processing': 'status-processing',
+                'extracting': 'status-processing',
+                'classifying': 'status-processing',
+                'parsed': 'status-parsed',
+                'active': 'status-active',
+                'complete': 'status-active',
+                'error': 'status-error'
+            }[paper.status] || 'status-uploaded';
+
+            const statusLabel = {
+                'uploaded': 'Uploaded',
+                'parsing': 'Processing...',
+                'processing': 'Processing...',
+                'extracting': 'Extracting...',
+                'classifying': 'Organizing...',
+                'parsed': 'Ready',
+                'active': 'Active',
+                'complete': 'Complete',
+                'error': 'Error'
+            }[paper.status] || paper.status;
+
+            const title = paper.title || 'Untitled paper';
+            const date = new Date(paper.created_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+
+            // Determine where the Open button should go
+            const isProcessing = ['uploaded', 'parsing', 'processing', 'extracting', 'classifying'].includes(paper.status);
+            const targetPage = isProcessing ? 'processing.html' : 'webapp.html';
+            const btnLabel = isProcessing ? 'View progress' : 'Open';
+            const btnIcon = isProcessing ? 'fa-spinner fa-spin' : 'fa-arrow-right';
+
+            return `
+                <div class="paper-card animate-slideUp">
+                    <div class="paper-info">
+                        <div class="paper-title">${escapeHtml(title)}</div>
+                        <div class="paper-meta">${date}${paper.field ? ' · ' + escapeHtml(paper.field) : ''}</div>
+                    </div>
+                    <div class="paper-status">
+                        <span class="status-dot ${statusClass}"></span>
+                        ${statusLabel}
+                    </div>
+                    <div class="paper-actions">
+                        <button class="paper-btn paper-btn-open" onclick="window.location.href='${targetPage}?paper=${paper.id}'">
+                            <i class="fas ${btnIcon}"></i> ${paper.status === 'error' ? 'Retry' : btnLabel}
+                        </button>
+                        <button class="paper-btn paper-btn-delete" onclick="openDeleteModal('${paper.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'docx': 'fa-file-word',
+                'doc': 'fa-file-word',
+                'pdf': 'fa-file-pdf',
+                'xlsx': 'fa-file-excel',
+                'xls': 'fa-file-excel'
+            };
+            return icons[ext] || 'fa-file';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function openDeleteModal(paperId) {
+            paperToDelete = paperId;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            paperToDelete = null;
+            document.getElementById('delete-modal').classList.add('hidden');
+        }
+
+        async function confirmDelete() {
+            if (!paperToDelete) return;
+
+            try {
+                await fetch(`${API_BASE}/api/papers/${paperToDelete}`, { method: 'DELETE' });
+                closeDeleteModal();
+                loadPapers();
+                loadTrash(); // Refresh trash to show newly deleted paper
+            } catch (error) {
+                console.error('Delete failed:', error);
+                alert('Failed to delete paper');
+            }
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                closeDeleteModal();
+                closePermanentDeleteModal();
+            }
+        });
+
+        document.getElementById('delete-modal').addEventListener('click', e => {
+            if (e.target.classList.contains('modal-overlay')) closeDeleteModal();
+        });
+
+        document.getElementById('permanent-delete-modal').addEventListener('click', e => {
+            if (e.target.classList.contains('modal-overlay')) closePermanentDeleteModal();
+        });
+    </script>
+</body>
+</html>

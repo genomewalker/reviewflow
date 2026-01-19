@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentation - ReviewFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            color: var(--dark);
+            background: var(--light);
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        header {
+            background: white;
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+        .logo img { width: 32px; }
+        nav a {
+            color: var(--muted);
+            text-decoration: none;
+            margin-left: 2rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--primary); }
+        .hero {
+            padding: 4rem 0;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        .hero p {
+            color: var(--muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .search-box {
+            max-width: 500px;
+            margin: 2rem auto 0;
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            background: white;
+        }
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79,70,229,0.1);
+        }
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+        }
+        .docs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+        .doc-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: var(--dark);
+            transition: all 0.2s;
+        }
+        .doc-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
+        }
+        .doc-card-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), #7C3AED);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        .doc-card-icon.green { background: linear-gradient(135deg, var(--secondary), #059669); }
+        .doc-card-icon.amber { background: linear-gradient(135deg, #F59E0B, #D97706); }
+        .doc-card-icon i {
+            font-size: 1.25rem;
+            color: white;
+        }
+        .doc-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        .doc-card p {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+        .section-title {
+            font-size: 1.5rem;
+            margin: 3rem 0 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            text-align: center;
+            color: var(--muted);
+            border-top: 1px solid var(--border);
+        }
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <img src="../assets/logo.svg" alt="ReviewFlow">
+                ReviewFlow Docs
+            </a>
+            <nav>
+                <a href="../index.html">Home</a>
+                <a href="../tutorial.html">Tutorial</a>
+                <a href="https://github.com/genomewalker/reviewflow">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="hero">
+            <h1>Documentation</h1>
+            <p>Everything you need to know about installing, configuring, and using ReviewFlow.</p>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search documentation..." id="search-input">
+            </div>
+        </div>
+
+        <h2 class="section-title">Getting Started</h2>
+        <div class="docs-grid">
+            <a href="installation.html" class="doc-card">
+                <div class="doc-card-icon">
+                    <i class="fas fa-download"></i>
+                </div>
+                <h3>Installation</h3>
+                <p>Install ReviewFlow on macOS, Linux, or Windows with npm.</p>
+            </a>
+            <a href="quickstart.html" class="doc-card">
+                <div class="doc-card-icon green">
+                    <i class="fas fa-rocket"></i>
+                </div>
+                <h3>Quick Start</h3>
+                <p>Get up and running in 5 minutes with your first paper.</p>
+            </a>
+            <a href="../tutorial.html" class="doc-card">
+                <div class="doc-card-icon amber">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h3>Tutorial</h3>
+                <p>Step-by-step guide from import to export.</p>
+            </a>
+        </div>
+
+        <h2 class="section-title">User Guide</h2>
+        <div class="docs-grid">
+            <a href="importing.html" class="doc-card">
+                <div class="doc-card-icon">
+                    <i class="fas fa-file-import"></i>
+                </div>
+                <h3>Importing Reviews</h3>
+                <p>Parse reviews from PDF, DOCX, text, or JSON files.</p>
+            </a>
+            <a href="ai-features.html" class="doc-card">
+                <div class="doc-card-icon green">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI Features</h3>
+                <p>Expert panels, potential solutions, and response generation.</p>
+            </a>
+            <a href="exporting.html" class="doc-card">
+                <div class="doc-card-icon amber">
+                    <i class="fas fa-file-export"></i>
+                </div>
+                <h3>Exporting</h3>
+                <p>Generate Word documents for journal submission.</p>
+            </a>
+            <a href="multi-paper.html" class="doc-card">
+                <div class="doc-card-icon">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <h3>Multi-Paper Management</h3>
+                <p>Work with multiple manuscripts simultaneously.</p>
+            </a>
+        </div>
+
+        <h2 class="section-title">Configuration</h2>
+        <div class="docs-grid">
+            <a href="configuration.html" class="doc-card">
+                <div class="doc-card-icon">
+                    <i class="fas fa-cog"></i>
+                </div>
+                <h3>Configuration</h3>
+                <p>Customize settings, models, and behavior.</p>
+            </a>
+            <a href="cli-reference.html" class="doc-card">
+                <div class="doc-card-icon green">
+                    <i class="fas fa-terminal"></i>
+                </div>
+                <h3>CLI Reference</h3>
+                <p>Complete command-line interface documentation.</p>
+            </a>
+            <a href="skills.html" class="doc-card">
+                <div class="doc-card-icon amber">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </div>
+                <h3>AI Skills</h3>
+                <p>Install and customize OpenCode AI skills.</p>
+            </a>
+        </div>
+
+        <h2 class="section-title">Reference</h2>
+        <div class="docs-grid">
+            <a href="../api/index.html" class="doc-card">
+                <div class="doc-card-icon">
+                    <i class="fas fa-code"></i>
+                </div>
+                <h3>API Reference</h3>
+                <p>Server endpoints and programmatic access.</p>
+            </a>
+            <a href="json-format.html" class="doc-card">
+                <div class="doc-card-icon green">
+                    <i class="fas fa-brackets-curly"></i>
+                </div>
+                <h3>JSON Format</h3>
+                <p>Data format specifications for import/export.</p>
+            </a>
+            <a href="troubleshooting.html" class="doc-card">
+                <div class="doc-card-icon amber">
+                    <i class="fas fa-wrench"></i>
+                </div>
+                <h3>Troubleshooting</h3>
+                <p>Common issues and solutions.</p>
+            </a>
+        </div>
+    </div>
+
+    <footer>
+        <p>
+            ReviewFlow Documentation |
+            <a href="https://github.com/genomewalker/reviewflow">GitHub</a> |
+            <a href="https://github.com/genomewalker/reviewflow/issues">Report an Issue</a>
+        </p>
+    </footer>
+
+    <script>
+        // Simple search functionality
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase();
+            document.querySelectorAll('.doc-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

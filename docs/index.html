@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReviewFlow - AI-Powered Peer Review Response Platform</title>
+    <meta name="description" content="Streamline your manuscript revision workflow with intelligent response generation. Manage multiple papers, generate AI-assisted responses, and track your progress.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-dark: #4338CA;
+            --secondary: #10B981;
+            --accent: #F59E0B;
+            --dark: #1F2937;
+            --darker: #111827;
+            --light: #F9FAFB;
+            --muted: #6B7280;
+            --border: #E5E7EB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: var(--light);
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--dark);
+            text-decoration: none;
+        }
+
+        .nav-logo img {
+            width: 32px;
+            height: 32px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .nav-cta {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(79, 70, 229, 0.5);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-large {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding: 8rem 2rem 4rem;
+            background: linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 50%, #FDF4FF 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 80%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(79,70,229,0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .hero-content h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-content p {
+            font-size: 1.25rem;
+            color: var(--muted);
+            margin-bottom: 2rem;
+            max-width: 500px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 3rem;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 3rem;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--muted);
+        }
+
+        .hero-image {
+            position: relative;
+        }
+
+        .hero-screenshot {
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .hero-badge {
+            position: absolute;
+            bottom: -20px;
+            left: 20px;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .hero-badge i {
+            font-size: 1.5rem;
+            color: var(--secondary);
+        }
+
+        .hero-badge-text {
+            font-weight: 600;
+        }
+
+        .hero-badge-sub {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 6rem 2rem;
+            background: white;
+        }
+
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 4rem;
+        }
+
+        .section-label {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: rgba(79,70,229,0.1);
+            color: var(--primary);
+            border-radius: 100px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .section-desc {
+            color: var(--muted);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: var(--light);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -20px rgba(0,0,0,0.15);
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), #7C3AED);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-icon i {
+            font-size: 1.25rem;
+            color: white;
+        }
+
+        .feature-icon.green {
+            background: linear-gradient(135deg, var(--secondary), #059669);
+        }
+
+        .feature-icon.amber {
+            background: linear-gradient(135deg, var(--accent), #D97706);
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-desc {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        /* How It Works */
+        .how-it-works {
+            padding: 6rem 2rem;
+            background: linear-gradient(180deg, var(--light) 0%, white 100%);
+        }
+
+        .steps {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+
+        .step {
+            display: flex;
+            gap: 2rem;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-content p {
+            color: var(--muted);
+        }
+
+        /* Install Section */
+        .install {
+            padding: 6rem 2rem;
+            background: var(--darker);
+            color: white;
+        }
+
+        .install .section-title {
+            color: white;
+        }
+
+        .install .section-desc {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .code-block {
+            max-width: 700px;
+            margin: 2rem auto 0;
+            background: #0D1117;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .code-header {
+            background: #161B22;
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .code-dots {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .code-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .code-dot.red { background: #FF5F56; }
+        .code-dot.yellow { background: #FFBD2E; }
+        .code-dot.green { background: #27C93F; }
+
+        .code-copy {
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .code-copy:hover {
+            color: white;
+        }
+
+        .code-content {
+            padding: 1.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+        }
+
+        .code-line {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .code-comment {
+            color: #8B949E;
+        }
+
+        .code-command {
+            color: #79C0FF;
+        }
+
+        /* Testimonials */
+        .testimonials {
+            padding: 6rem 2rem;
+            background: white;
+        }
+
+        .testimonials-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .testimonial-card {
+            background: var(--light);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .testimonial-quote {
+            font-style: italic;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .testimonial-author {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .testimonial-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), #7C3AED);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        .testimonial-name {
+            font-weight: 600;
+        }
+
+        .testimonial-role {
+            font-size: 0.875rem;
+            color: var(--muted);
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 6rem 2rem;
+            background: linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%);
+            text-align: center;
+            color: white;
+        }
+
+        .cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .cta .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+
+        .cta .btn-primary:hover {
+            background: var(--light);
+        }
+
+        /* Footer */
+        footer {
+            padding: 4rem 2rem 2rem;
+            background: var(--darker);
+            color: white;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 4rem;
+        }
+
+        .footer-brand p {
+            color: rgba(255,255,255,0.7);
+            margin-top: 1rem;
+            max-width: 300px;
+        }
+
+        .footer-links h4 {
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .footer-links ul {
+            list-style: none;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem 0;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 4rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.875rem;
+        }
+
+        .footer-social {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .footer-social a {
+            color: rgba(255,255,255,0.5);
+            font-size: 1.25rem;
+            transition: color 0.2s;
+        }
+
+        .footer-social a:hover {
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero-content p {
+                margin-left: auto;
+                margin-right: auto;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+
+            .hero-stats {
+                justify-content: center;
+            }
+
+            .hero-image {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .testimonials-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero-content h1 {
+                font-size: 2.5rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .step {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .step-number {
+                margin: 0 auto;
+            }
+
+            .footer-container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <img src="assets/logo.svg" alt="ReviewFlow">
+                ReviewFlow
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#how-it-works">How It Works</a></li>
+                <li><a href="tutorial.html">Tutorial</a></li>
+                <li><a href="guides/">Guides</a></li>
+            </ul>
+            <div class="nav-cta">
+                <a href="https://github.com/genomewalker/reviewflow" class="btn btn-secondary">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
+                <a href="#install" class="btn btn-primary">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1>Respond to Peer Reviews with AI Assistance</h1>
+                <p>ReviewFlow streamlines your manuscript revision workflow. Organize comments, generate intelligent responses, and track your progress—all in one place.</p>
+                <div class="hero-buttons">
+                    <a href="#install" class="btn btn-primary btn-large">
+                        <i class="fas fa-download"></i> Install Now
+                    </a>
+                    <a href="tutorial.html" class="btn btn-secondary btn-large">
+                        <i class="fas fa-play-circle"></i> Watch Tutorial
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <div class="stat-value">10x</div>
+                        <div class="stat-label">Faster Responses</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">100%</div>
+                        <div class="stat-label">Local & Private</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value">Free</div>
+                        <div class="stat-label">Open Source</div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="assets/screenshot-hero.png" alt="ReviewFlow Interface" class="hero-screenshot">
+                <div class="hero-badge">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <div class="hero-badge-text">12/15 Comments Done</div>
+                        <div class="hero-badge-sub">80% Complete</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="section-header">
+            <span class="section-label">Features</span>
+            <h2 class="section-title">Everything You Need for Revisions</h2>
+            <p class="section-desc">From organizing reviewer comments to generating polished responses, ReviewFlow has you covered.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3 class="feature-title">AI-Assisted Responses</h3>
+                <p class="feature-desc">Generate contextual draft responses using Claude or GPT. Get multiple response strategies for each comment.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3 class="feature-title">Expert Panel</h3>
+                <p class="feature-desc">Virtual experts discuss complex technical comments, providing diverse perspectives and recommendations.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon amber">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3 class="feature-title">Progress Tracking</h3>
+                <p class="feature-desc">Visual dashboard shows completion status across all reviewers. Never lose track of pending items.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-file-import"></i>
+                </div>
+                <h3 class="feature-title">Smart Import</h3>
+                <p class="feature-desc">Parse reviewer comments from PDF, DOCX, or plain text. Automatic categorization by reviewer and type.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon green">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <h3 class="feature-title">Multi-Paper Support</h3>
+                <p class="feature-desc">Manage multiple manuscripts simultaneously. Each paper has its own workspace and progress.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon amber">
+                    <i class="fas fa-file-export"></i>
+                </div>
+                <h3 class="feature-title">Export to Word</h3>
+                <p class="feature-desc">Generate formatted response documents ready for journal submission with one click.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="section-header">
+            <span class="section-label">Workflow</span>
+            <h2 class="section-title">How It Works</h2>
+            <p class="section-desc">Get from reviewer comments to polished responses in four simple steps.</p>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Import Your Reviews</h3>
+                    <p>Paste reviewer comments directly, upload a PDF/DOCX, or import from a structured JSON file. ReviewFlow automatically parses and organizes comments by reviewer.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Process with AI</h3>
+                    <p>Click "Process Paper" to analyze all comments. The AI categorizes each comment, identifies key concerns, and prepares expert discussions with potential solutions.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Review & Refine</h3>
+                    <p>Browse AI-generated responses, select from different strategies, and edit to match your voice. Use the expert panel for complex technical questions.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Export & Submit</h3>
+                    <p>Export all responses to a formatted Word document. Copy individual responses or download the complete response letter for journal submission.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Install Section -->
+    <section class="install" id="install">
+        <div class="section-header">
+            <span class="section-label">Installation</span>
+            <h2 class="section-title">Get Started in Minutes</h2>
+            <p class="section-desc">Install ReviewFlow globally with npm and launch from anywhere.</p>
+        </div>
+        <div class="code-block">
+            <div class="code-header">
+                <div class="code-dots">
+                    <span class="code-dot red"></span>
+                    <span class="code-dot yellow"></span>
+                    <span class="code-dot green"></span>
+                </div>
+                <button class="code-copy" onclick="copyCode()">
+                    <i class="far fa-copy"></i>
+                </button>
+            </div>
+            <div class="code-content">
+                <span class="code-line code-comment"># Install OpenCode CLI (for AI features)</span>
+                <span class="code-line"><span class="code-command">npm install -g @anthropic/opencode</span></span>
+                <span class="code-line"></span>
+                <span class="code-line code-comment"># Install ReviewFlow</span>
+                <span class="code-line"><span class="code-command">npm install -g reviewflow</span></span>
+                <span class="code-line"></span>
+                <span class="code-line code-comment"># Launch!</span>
+                <span class="code-line"><span class="code-command">reviewflow</span></span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials">
+        <div class="section-header">
+            <span class="section-label">Testimonials</span>
+            <h2 class="section-title">Loved by Researchers</h2>
+            <p class="section-desc">See what academics are saying about ReviewFlow.</p>
+        </div>
+        <div class="testimonials-grid">
+            <div class="testimonial-card">
+                <p class="testimonial-quote">"ReviewFlow cut my revision time in half. The expert panel feature is brilliant for complex statistical questions."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">JK</div>
+                    <div>
+                        <div class="testimonial-name">Dr. Jane Kim</div>
+                        <div class="testimonial-role">Genomics Researcher</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-quote">"Finally, a tool that understands the academic workflow. The progress tracking keeps me organized across multiple papers."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">MS</div>
+                    <div>
+                        <div class="testimonial-name">Prof. Marco Silva</div>
+                        <div class="testimonial-role">Environmental Science</div>
+                    </div>
+                </div>
+            </div>
+            <div class="testimonial-card">
+                <p class="testimonial-quote">"The AI suggestions are surprisingly good. It understands scientific context and helps me articulate my responses clearly."</p>
+                <div class="testimonial-author">
+                    <div class="testimonial-avatar">AL</div>
+                    <div>
+                        <div class="testimonial-name">Dr. Anna Lee</div>
+                        <div class="testimonial-role">Molecular Biology</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta">
+        <h2>Ready to Streamline Your Revisions?</h2>
+        <p>Join researchers who are saving hours on their manuscript responses.</p>
+        <a href="#install" class="btn btn-primary btn-large">
+            <i class="fas fa-rocket"></i> Get Started Free
+        </a>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-brand">
+                <a href="#" class="nav-logo">
+                    <img src="assets/logo.svg" alt="ReviewFlow">
+                    ReviewFlow
+                </a>
+                <p>AI-powered peer review response platform for researchers. Open source and free forever.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Product</h4>
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="tutorial.html">Tutorial</a></li>
+                    <li><a href="guides/">Documentation</a></li>
+                    <li><a href="guides/changelog.html">Changelog</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="guides/installation.html">Installation</a></li>
+                    <li><a href="guides/configuration.html">Configuration</a></li>
+                    <li><a href="guides/troubleshooting.html">Troubleshooting</a></li>
+                    <li><a href="api/">API Reference</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Community</h4>
+                <ul>
+                    <li><a href="https://github.com/genomewalker/reviewflow">GitHub</a></li>
+                    <li><a href="https://github.com/genomewalker/reviewflow/issues">Issues</a></li>
+                    <li><a href="https://github.com/genomewalker/reviewflow/discussions">Discussions</a></li>
+                    <li><a href="CONTRIBUTING.md">Contributing</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div>2025 ReviewFlow. MIT License.</div>
+            <div class="footer-social">
+                <a href="https://github.com/genomewalker/reviewflow"><i class="fab fa-github"></i></a>
+                <a href="https://twitter.com"><i class="fab fa-twitter"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function copyCode() {
+            const code = `npm install -g @anthropic/opencode
+npm install -g reviewflow
+reviewflow`;
+            navigator.clipboard.writeText(code);
+            const btn = document.querySelector('.code-copy');
+            btn.innerHTML = '<i class="fas fa-check"></i>';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="far fa-copy"></i>';
+            }, 2000);
+        }
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

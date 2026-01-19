@@ -1,0 +1,69 @@
+{
+  "name": "reviewflow",
+  "version": "2.0.0",
+  "description": "AI-powered platform for managing peer review responses - supports multiple manuscripts",
+  "main": "cli.js",
+  "bin": {
+    "reviewflow": "./cli.js",
+    "paper-review": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "server": "node opencode-server.js api",
+    "setup": "node setup.js",
+    "papers": "node cli.js papers",
+    "add-paper": "node cli.js papers add",
+    "postinstall": "node scripts/postinstall.js || true"
+  },
+  "keywords": [
+    "peer-review",
+    "manuscript",
+    "academic",
+    "ai",
+    "opencode",
+    "research",
+    "scientific-writing",
+    "reviewer-response",
+    "claude",
+    "gpt"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/genomewalker/reviewflow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/genomewalker/reviewflow/issues"
+  },
+  "homepage": "https://github.com/genomewalker/reviewflow#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "files": [
+    "cli.js",
+    "db.js",
+    "setup.js",
+    "opencode-server.js",
+    "webapp.html",
+    "index.html",
+    "css/",
+    "js/",
+    "scripts/",
+    "skills/",
+    "templates/",
+    "input/PUT_YOUR_FILES_HERE.txt",
+    "README.md"
+  ],
+  "dependencies": {
+    "better-sqlite3": "^11.0.0",
+    "mammoth": "^1.11.0",
+    "pdf-parse": "^2.4.5",
+    "xlsx": "^0.18.5"
+  }
+}
