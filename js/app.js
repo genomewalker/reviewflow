@@ -1,5 +1,5 @@
 /**
- * ReviewFlow - Main Application JavaScript
+ * Rebuttr - Main Application JavaScript
  * Modularized from original monolithic index.html
  */
 
@@ -264,7 +264,7 @@ const API_BASE = 'http://localhost:3001';
             if (!paperId || paperId === currentPaperId) return;
 
             currentPaperId = paperId;
-            localStorage.setItem('reviewflow_last_paper', paperId);
+            localStorage.setItem('rebuttr_last_paper', paperId);
             await loadPaperData(paperId);
 
             // Update URL without reload
@@ -960,7 +960,7 @@ Ask me anything about this comment, or request a draft response.`;
             } else if (importCurrentStep === 2) {
                 nextBtn.innerHTML = '<i class="fas fa-brain mr-1"></i>Generate Expert Analysis';
             } else {
-                nextBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Import to ReviewFlow';
+                nextBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Import to Rebuttr';
             }
         }
 
@@ -1232,7 +1232,7 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
             }
 
             // Clear stored job
-            localStorage.removeItem('reviewflow_active_job');
+            localStorage.removeItem('rebuttr_active_job');
             activeJobId = null;
             activeJobPaperId = null;
         }
@@ -1308,7 +1308,7 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
                 }
 
                 // Clear stored job
-                localStorage.removeItem('reviewflow_active_job');
+                localStorage.removeItem('rebuttr_active_job');
 
                 // Update title
                 document.getElementById('progress-widget-title').textContent =
@@ -1318,7 +1318,7 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
                 if (data.status === 'completed' && activeJobPaperId) {
                     // Set current paper and save to localStorage
                     currentPaperId = activeJobPaperId;
-                    localStorage.setItem('reviewflow_last_paper', activeJobPaperId);
+                    localStorage.setItem('rebuttr_last_paper', activeJobPaperId);
 
                     // Load data (await to ensure proper sequencing)
                     await loadPapers();
@@ -1352,7 +1352,7 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
             activeJobPaperId = paperId;
 
             // Store in localStorage for recovery
-            localStorage.setItem('reviewflow_active_job', JSON.stringify({
+            localStorage.setItem('rebuttr_active_job', JSON.stringify({
                 jobId,
                 paperId,
                 startedAt: Date.now()
@@ -1373,7 +1373,7 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
         }
 
         async function recoverProgressOnLoad() {
-            const stored = localStorage.getItem('reviewflow_active_job');
+            const stored = localStorage.getItem('rebuttr_active_job');
             if (!stored) return;
 
             try {
@@ -1381,14 +1381,14 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
 
                 // Check if job is still recent (within 30 minutes)
                 if (Date.now() - startedAt > 30 * 60 * 1000) {
-                    localStorage.removeItem('reviewflow_active_job');
+                    localStorage.removeItem('rebuttr_active_job');
                     return;
                 }
 
                 // Check current status
                 const response = await fetch(`${API_BASE}/papers/${paperId}/status`);
                 if (!response.ok) {
-                    localStorage.removeItem('reviewflow_active_job');
+                    localStorage.removeItem('rebuttr_active_job');
                     return;
                 }
 
@@ -1406,7 +1406,7 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
                 }
             } catch (e) {
                 console.error('Error recovering progress:', e);
-                localStorage.removeItem('reviewflow_active_job');
+                localStorage.removeItem('rebuttr_active_job');
             }
         }
 
@@ -3626,7 +3626,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                 await switchPaper(urlPaperId);
             } else {
                 // PRIORITY 2: Check localStorage for last opened paper
-                const lastPaperId = localStorage.getItem('reviewflow_last_paper');
+                const lastPaperId = localStorage.getItem('rebuttr_last_paper');
 
                 if (lastPaperId && papers.find(p => p.id === lastPaperId)) {
                     // Resume last paper

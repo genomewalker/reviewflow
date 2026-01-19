@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Full flow test for ReviewFlow
+ * Full flow test for Rebuttr
  * Tests the complete upload and processing workflow with real files
  */
 
@@ -220,7 +220,7 @@ async function compareWithOriginal(paperId) {
 
 async function main() {
     console.log('═'.repeat(60));
-    console.log('   ReviewFlow Full Test');
+    console.log('   Rebuttr Full Test');
     console.log('═'.repeat(60));
 
     try {

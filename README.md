@@ -1,7 +1,7 @@
-# ReviewFlow
+# Rebuttr
 
 <p align="center">
-  <img src="docs/assets/logo.svg" alt="ReviewFlow Logo" width="120">
+  <img src="docs/assets/logo.svg" alt="Rebuttr Logo" width="120">
 </p>
 
 <h3 align="center">AI-Powered Peer Review Response Platform</h3>
@@ -11,23 +11,23 @@
 </p>
 
 <p align="center">
-  <a href="https://genomewalker.github.io/reviewflow">Documentation</a> •
-  <a href="https://genomewalker.github.io/reviewflow/tutorial">Tutorial</a> •
-  <a href="https://github.com/genomewalker/reviewflow/issues">Issues</a>
+  <a href="https://genomewalker.github.io/rebuttr">Documentation</a> •
+  <a href="https://genomewalker.github.io/rebuttr/tutorial">Tutorial</a> •
+  <a href="https://github.com/genomewalker/rebuttr/issues">Issues</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/npm/v/reviewflow?color=blue" alt="npm version">
+  <img src="https://img.shields.io/npm/v/rebuttr?color=blue" alt="npm version">
   <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen" alt="node version">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="platforms">
-  <img src="https://img.shields.io/github/license/genomewalker/reviewflow" alt="license">
+  <img src="https://img.shields.io/github/license/genomewalker/rebuttr" alt="license">
 </p>
 
 ---
 
-## Why ReviewFlow?
+## Why Rebuttr?
 
-Responding to peer review comments is one of the most time-consuming parts of academic publishing. ReviewFlow helps you:
+Responding to peer review comments is one of the most time-consuming parts of academic publishing. Rebuttr helps you:
 
 - **Organize** all reviewer comments in one place
 - **Generate** intelligent draft responses using AI
@@ -62,11 +62,11 @@ npm i -g opencode-ai
 
 ```bash
 # Install globally from GitHub
-npm i -g github:genomewalker/reviewflow
+npm i -g github:genomewalker/rebuttr
 
 # Or clone and install locally
-git clone https://github.com/genomewalker/reviewflow.git
-cd reviewflow
+git clone https://github.com/genomewalker/rebuttr.git
+cd rebuttr
 npm install
 npm link
 ```
@@ -74,7 +74,7 @@ npm link
 ### Launch
 
 ```bash
-reviewflow
+rebuttr
 ```
 
 This starts the server and opens your browser to `http://localhost:3001`
@@ -85,16 +85,16 @@ This starts the server and opens your browser to `http://localhost:3001`
 
 **Option 1: Interactive CLI**
 ```bash
-reviewflow papers add
+rebuttr papers add
 ```
 
 **Option 2: Import JSON**
 ```bash
-reviewflow papers import reviews.json
+rebuttr papers import reviews.json
 ```
 
 **Option 3: Web Interface**
-1. Open ReviewFlow in your browser
+1. Open Rebuttr in your browser
 2. Click "Add Paper"
 3. Paste or upload your reviewer comments
 
@@ -110,33 +110,33 @@ reviewflow papers import reviews.json
 ### CLI Reference
 
 ```bash
-reviewflow                      # Launch (server + browser)
-reviewflow start                # Server only (foreground)
-reviewflow stop                 # Stop server
-reviewflow status               # Check server status
-reviewflow restart              # Restart server
+rebuttr                      # Launch (server + browser)
+rebuttr start                # Server only (foreground)
+rebuttr stop                 # Stop server
+rebuttr status               # Check server status
+rebuttr restart              # Restart server
 
-reviewflow papers               # List all papers
-reviewflow papers add           # Add interactively
-reviewflow papers import <file> # Import from JSON
-reviewflow papers open <id>     # Open specific paper
-reviewflow papers remove <id>   # Archive paper
+rebuttr papers               # List all papers
+rebuttr papers add           # Add interactively
+rebuttr papers import <file> # Import from JSON
+rebuttr papers open <id>     # Open specific paper
+rebuttr papers remove <id>   # Archive paper
 
-reviewflow config               # Show configuration
-reviewflow config set <k> <v>   # Set config value
-reviewflow init                 # Initialize database
-reviewflow skills list          # List installed AI skills
-reviewflow skills install       # Install/update skills
-reviewflow help                 # Show help
+rebuttr config               # Show configuration
+rebuttr config set <k> <v>   # Set config value
+rebuttr init                 # Initialize database
+rebuttr skills list          # List installed AI skills
+rebuttr skills install       # Install/update skills
+rebuttr help                 # Show help
 ```
 
 ## Configuration
 
-Configuration is stored in `~/.config/reviewflow/config.json`:
+Configuration is stored in `~/.config/rebuttr/config.json`:
 
 ```json
 {
-  "projectFolder": "~/ReviewFlow",
+  "projectFolder": "~/Rebuttr",
   "server": {
     "port": 3001
   },
@@ -149,16 +149,16 @@ Configuration is stored in `~/.config/reviewflow/config.json`:
 
 Set values via CLI:
 ```bash
-reviewflow config set server.port 3002
-reviewflow config set opencode.model opus
+rebuttr config set server.port 3002
+rebuttr config set opencode.model opus
 ```
 
 ## Data Storage
 
-All data is stored locally in `~/ReviewFlow/`:
+All data is stored locally in `~/Rebuttr/`:
 
 ```
-~/ReviewFlow/
+~/Rebuttr/
 ├── data/
 │   ├── review_platform.db    # SQLite database
 │   └── papers/               # Per-paper files
@@ -169,7 +169,7 @@ All data is stored locally in `~/ReviewFlow/`:
 
 ## AI Expert Skills
 
-ReviewFlow includes specialized AI skills installed to `~/.config/opencode/skill/`:
+Rebuttr includes specialized AI skills installed to `~/.config/opencode/skill/`:
 
 | Skill | Expertise |
 |-------|-----------|
@@ -221,7 +221,7 @@ npm rebuild better-sqlite3
 lsof -i :3001
 
 # Use different port
-reviewflow config set server.port 3002
+rebuttr config set server.port 3002
 ```
 
 ### AI features not working

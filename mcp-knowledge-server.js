@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * MCP Server for ReviewFlow Knowledge Queries
+ * MCP Server for Rebuttr Knowledge Queries
  *
  * This server exposes tools that allow an AI to query worker sessions
  * that have context on supplementary files (tables, figures, data).
@@ -14,12 +14,12 @@
 const http = require('http');
 
 // Configuration
-const REVIEWFLOW_API = process.env.REVIEWFLOW_API || 'http://localhost:3001';
+const REBUTTR_API = process.env.REBUTTR_API || process.env.REBUTTR_API || 'http://localhost:3001';
 const PAPER_ID = process.env.PAPER_ID || null;
 
 // Helper to make HTTP requests
 async function fetchAPI(endpoint, options = {}) {
-    const url = `${REVIEWFLOW_API}${endpoint}`;
+    const url = `${REBUTTR_API}${endpoint}`;
 
     return new Promise((resolve, reject) => {
         const urlObj = new URL(url);
@@ -255,7 +255,7 @@ async function handleMessage(message) {
                         tools: {}
                     },
                     serverInfo: {
-                        name: 'reviewflow-knowledge',
+                        name: 'rebuttr-knowledge',
                         version: '1.0.0'
                     }
                 }
@@ -325,7 +325,7 @@ async function main() {
     const log = (msg) => process.stderr.write(`[MCP Knowledge] ${msg}\n`);
 
     log('Starting MCP Knowledge Server...');
-    log(`ReviewFlow API: ${REVIEWFLOW_API}`);
+    log(`Rebuttr API: ${REBUTTR_API}`);
     if (PAPER_ID) log(`Paper ID: ${PAPER_ID}`);
 
     rl.on('line', async (line) => {

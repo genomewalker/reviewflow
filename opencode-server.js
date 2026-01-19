@@ -364,7 +364,7 @@ const BASE_DIR = __dirname;
 
 // Load project folder from platform config (same as cli.js)
 function loadPlatformConfig() {
-    const GLOBAL_CONFIG_PATH = path.join(os.homedir(), '.config', 'reviewflow', 'config.json');
+    const GLOBAL_CONFIG_PATH = path.join(os.homedir(), '.config', 'rebuttr', 'config.json');
     const LOCAL_CONFIG_PATH = path.join(BASE_DIR, 'platform-config.json');
     let config = {};
 
@@ -387,7 +387,7 @@ function loadPlatformConfig() {
 }
 
 const PLATFORM_CONFIG = loadPlatformConfig();
-const PROJECT_FOLDER = PLATFORM_CONFIG.projectFolder || path.join(os.homedir(), 'ReviewFlow');
+const PROJECT_FOLDER = PLATFORM_CONFIG.projectFolder || path.join(os.homedir(), 'Rebuttr');
 
 const DB_FILE = path.join(PROJECT_FOLDER, 'data', 'review_platform.db');
 const REQUESTS_FILE = path.join(BASE_DIR, 'claude_requests.json');
@@ -4598,7 +4598,7 @@ Best suited for: ${expert.comment_types?.join(', ') || 'general comments'}
 
                     // Decode base64 and save to temp file
                     const buffer = Buffer.from(data, 'base64');
-                    const tempDir = path.join(os.tmpdir(), 'reviewflow-extract');
+                    const tempDir = path.join(os.tmpdir(), 'rebuttr-extract');
                     fs.mkdirSync(tempDir, { recursive: true });
                     const tempFile = path.join(tempDir, `${Date.now()}-${filename}`);
                     const outputFile = path.join(tempDir, `${Date.now()}-output.txt`);

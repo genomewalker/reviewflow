@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Installation - ReviewFlow Documentation</title>
+    <title>Installation - Rebuttr Documentation</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -242,13 +242,13 @@
     <header>
         <div class="header-content">
             <a href="../index.html" class="logo">
-                <img src="../assets/logo.svg" alt="ReviewFlow">
-                ReviewFlow Docs
+                <img src="../assets/logo.svg" alt="Rebuttr">
+                Rebuttr Docs
             </a>
             <nav>
                 <a href="../index.html">Home</a>
                 <a href="../tutorial.html">Tutorial</a>
-                <a href="https://github.com/genomewalker/reviewflow">GitHub</a>
+                <a href="https://github.com/genomewalker/rebuttr">GitHub</a>
             </nav>
         </div>
     </header>
@@ -279,7 +279,7 @@
 
         <main class="content">
             <h1>Installation</h1>
-            <p class="subtitle">Install ReviewFlow on macOS, Linux, or Windows.</p>
+            <p class="subtitle">Install Rebuttr on macOS, Linux, or Windows.</p>
 
             <h2>Requirements</h2>
             <table class="requirements-table">
@@ -291,7 +291,7 @@
                 <tr>
                     <td>Node.js</td>
                     <td>18.0.0 or higher</td>
-                    <td>Required for running ReviewFlow</td>
+                    <td>Required for running Rebuttr</td>
                 </tr>
                 <tr>
                     <td>npm</td>
@@ -383,8 +383,8 @@ npm i -g opencode-ai
                 <p>After installing OpenCode, you'll need to configure your API key. Run <code>opencode</code> and follow the prompts to set up authentication.</p>
             </div>
 
-            <h2>Step 3: Install ReviewFlow</h2>
-            <p>Install ReviewFlow globally to use it from anywhere:</p>
+            <h2>Step 3: Install Rebuttr</h2>
+            <p>Install Rebuttr globally to use it from anywhere:</p>
 
             <div class="code-block">
                 <div class="code-header">
@@ -392,17 +392,17 @@ npm i -g opencode-ai
                     <button class="copy-btn"><i class="far fa-copy"></i></button>
                 </div>
                 <div class="code-content">
-npm i -g github:genomewalker/reviewflow
+npm i -g github:genomewalker/rebuttr
                 </div>
             </div>
 
             <p>This will:</p>
             <ul>
-                <li>Install ReviewFlow and its dependencies</li>
+                <li>Install Rebuttr and its dependencies</li>
                 <li>Compile native SQLite bindings for your platform</li>
-                <li>Create the <code>reviewflow</code> command</li>
+                <li>Create the <code>rebuttr</code> command</li>
                 <li>Install AI expert skills to <code>~/.config/opencode/skill/</code></li>
-                <li>Create data directory at <code>~/ReviewFlow/</code></li>
+                <li>Create data directory at <code>~/Rebuttr/</code></li>
             </ul>
 
             <h2>Step 4: Verify Installation</h2>
@@ -413,16 +413,16 @@ npm i -g github:genomewalker/reviewflow
                 </div>
                 <div class="code-content">
 <span class="comment"># Check version</span>
-reviewflow --help
+rebuttr --help
 
-<span class="comment"># Launch ReviewFlow</span>
-reviewflow
+<span class="comment"># Launch Rebuttr</span>
+rebuttr
                 </div>
             </div>
 
             <div class="alert alert-success">
                 <h5><i class="fas fa-check-circle"></i> Success!</h5>
-                <p>If you see the ReviewFlow banner and the browser opens to <code>http://localhost:3001</code>, you're ready to go!</p>
+                <p>If you see the Rebuttr banner and the browser opens to <code>http://localhost:3001</code>, you're ready to go!</p>
             </div>
 
             <h2>Platform-Specific Notes</h2>
@@ -455,10 +455,10 @@ sudo dnf groupinstall "Development Tools"
             </div>
 
             <h2>Updating</h2>
-            <p>To update ReviewFlow to the latest version:</p>
+            <p>To update Rebuttr to the latest version:</p>
             <div class="code-block">
                 <div class="code-header"><span>Terminal</span></div>
-                <div class="code-content">npm i -g github:genomewalker/reviewflow</div>
+                <div class="code-content">npm i -g github:genomewalker/rebuttr</div>
             </div>
 
             <h2>Uninstalling</h2>
@@ -466,16 +466,16 @@ sudo dnf groupinstall "Development Tools"
                 <div class="code-header"><span>Terminal</span></div>
                 <div class="code-content">
 <span class="comment"># Remove the package</span>
-npm uninstall -g reviewflow
+npm uninstall -g rebuttr
 
 <span class="comment"># Optionally remove data (backup first!)</span>
-rm -rf ~/ReviewFlow
+rm -rf ~/Rebuttr
                 </div>
             </div>
 
             <div class="alert alert-warning">
                 <h5><i class="fas fa-exclamation-triangle"></i> Warning</h5>
-                <p>Removing <code>~/ReviewFlow</code> will delete all your papers and responses. Export your data first!</p>
+                <p>Removing <code>~/Rebuttr</code> will delete all your papers and responses. Export your data first!</p>
             </div>
 
             <h2>Next Steps</h2>
@@ -490,7 +490,7 @@ rm -rf ~/ReviewFlow
     <footer>
         <p>
             <a href="index.html">Documentation</a> |
-            <a href="https://github.com/genomewalker/reviewflow">GitHub</a> |
+            <a href="https://github.com/genomewalker/rebuttr">GitHub</a> |
             <a href="troubleshooting.html">Troubleshooting</a>
         </p>
     </footer>

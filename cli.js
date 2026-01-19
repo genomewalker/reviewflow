@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * ReviewFlow - Main CLI
+ * Rebuttr - Main CLI
  *
  * Unified command-line interface for managing papers and running the platform.
  *
  * Usage:
- *   reviewflow                      # Start the platform (server + open browser)
- *   reviewflow start                # Start server only
- *   reviewflow papers               # List all papers
- *   reviewflow papers add           # Add a new paper
- *   reviewflow papers import <file> # Import paper from JSON
- *   reviewflow papers remove <id>   # Archive a paper
- *   reviewflow init                 # Initialize/reset database
- *   reviewflow help                 # Show help
+ *   rebuttr                      # Start the platform (server + open browser)
+ *   rebuttr start                # Start server only
+ *   rebuttr papers               # List all papers
+ *   rebuttr papers add           # Add a new paper
+ *   rebuttr papers import <file> # Import paper from JSON
+ *   rebuttr papers remove <id>   # Archive a paper
+ *   rebuttr init                 # Initialize/reset database
+ *   rebuttr help                 # Show help
  */
 
 const { spawn, exec, execSync } = require('child_process');
@@ -24,7 +24,7 @@ const os = require('os');
 
 // Paths
 const BASE_DIR = __dirname;
-const GLOBAL_CONFIG_PATH = path.join(os.homedir(), '.config', 'reviewflow', 'config.json');
+const GLOBAL_CONFIG_PATH = path.join(os.homedir(), '.config', 'rebuttr', 'config.json');
 const LOCAL_CONFIG_PATH = path.join(BASE_DIR, 'platform-config.json');
 
 // Load config (global takes precedence)
@@ -54,7 +54,7 @@ function loadConfig() {
 }
 
 const CONFIG = loadConfig();
-const PROJECT_FOLDER = CONFIG.projectFolder || path.join(os.homedir(), 'ReviewFlow');
+const PROJECT_FOLDER = CONFIG.projectFolder || path.join(os.homedir(), 'Rebuttr');
 const DB_PATH = path.join(PROJECT_FOLDER, 'data', 'review_platform.db');
 
 // Database (better-sqlite3) - required
@@ -92,7 +92,7 @@ const log = {
 
 function getDb() {
     if (!fs.existsSync(DB_PATH)) {
-        log.error('Database not initialized. Run: reviewflow init');
+        log.error('Database not initialized. Run: rebuttr init');
         process.exit(1);
     }
     return new Database(DB_PATH);
@@ -429,9 +429,9 @@ function stopServer() {
     return new Promise((resolve) => {
         try {
             // Find and kill the server process - match multiple patterns
-            // Could be "node opencode-server.js" or "node reviewflow start" or similar
+            // Could be "node opencode-server.js" or "node rebuttr start" or similar
             execSync('pkill -f "opencode-server.js" 2>/dev/null || true', { encoding: 'utf8' });
-            execSync('pkill -f "reviewflow start" 2>/dev/null || true', { encoding: 'utf8' });
+            execSync('pkill -f "rebuttr start" 2>/dev/null || true', { encoding: 'utf8' });
             execSync('pkill -f "paper-review start" 2>/dev/null || true', { encoding: 'utf8' });
             // Give it a moment to shut down
             setTimeout(() => resolve(true), 500);
@@ -574,7 +574,7 @@ function checkOpenCode() {
 }
 
 function showBanner() {
-    const title = 'ReviewFlow';
+    const title = 'Rebuttr';
     const subtitle = 'AI-powered peer review response platform';
     const width = 57; // inner width between ║ characters
     const pad1 = ' '.repeat(width - 3 - title.length);
@@ -600,37 +600,37 @@ function requireOpenCode() {
 function showHelp() {
     console.log(`
 ${c.bold}Usage:${c.reset}
-  ${c.cyan}reviewflow${c.reset}                        Start platform (server + browser)
-  ${c.cyan}reviewflow start${c.reset}                  Start server in foreground
-  ${c.cyan}reviewflow stop${c.reset}                   Stop the server
-  ${c.cyan}reviewflow status${c.reset}                 Check server status
-  ${c.cyan}reviewflow restart${c.reset}                Restart the server
-  ${c.cyan}reviewflow papers${c.reset}                 List all papers
-  ${c.cyan}reviewflow papers add${c.reset}             Add a new paper interactively
-  ${c.cyan}reviewflow papers import <file>${c.reset}  Import from JSON file
-  ${c.cyan}reviewflow papers remove <id>${c.reset}    Archive a paper
-  ${c.cyan}reviewflow papers open <id>${c.reset}      Open specific paper in browser
-  ${c.cyan}reviewflow config${c.reset}                 Show current configuration
-  ${c.cyan}reviewflow config set <key> <val>${c.reset} Set a config value
-  ${c.cyan}reviewflow init${c.reset}                   Initialize database + install skills
-  ${c.cyan}reviewflow skills${c.reset}                 Manage OpenCode skills
-  ${c.cyan}reviewflow skills list${c.reset}            List installed skills
-  ${c.cyan}reviewflow skills install${c.reset}         Install/update skills
-  ${c.cyan}reviewflow help${c.reset}                   Show this help
+  ${c.cyan}rebuttr${c.reset}                        Start platform (server + browser)
+  ${c.cyan}rebuttr start${c.reset}                  Start server in foreground
+  ${c.cyan}rebuttr stop${c.reset}                   Stop the server
+  ${c.cyan}rebuttr status${c.reset}                 Check server status
+  ${c.cyan}rebuttr restart${c.reset}                Restart the server
+  ${c.cyan}rebuttr papers${c.reset}                 List all papers
+  ${c.cyan}rebuttr papers add${c.reset}             Add a new paper interactively
+  ${c.cyan}rebuttr papers import <file>${c.reset}  Import from JSON file
+  ${c.cyan}rebuttr papers remove <id>${c.reset}    Archive a paper
+  ${c.cyan}rebuttr papers open <id>${c.reset}      Open specific paper in browser
+  ${c.cyan}rebuttr config${c.reset}                 Show current configuration
+  ${c.cyan}rebuttr config set <key> <val>${c.reset} Set a config value
+  ${c.cyan}rebuttr init${c.reset}                   Initialize database + install skills
+  ${c.cyan}rebuttr skills${c.reset}                 Manage OpenCode skills
+  ${c.cyan}rebuttr skills list${c.reset}            List installed skills
+  ${c.cyan}rebuttr skills install${c.reset}         Install/update skills
+  ${c.cyan}rebuttr help${c.reset}                   Show this help
 
 ${c.bold}Examples:${c.reset}
-  reviewflow                         # Launch the platform
-  reviewflow stop                    # Stop running server
-  reviewflow status                  # Check if server is running
-  reviewflow papers add              # Add a new manuscript
-  reviewflow papers import data.json # Import existing review data
-  reviewflow config                  # Show config
+  rebuttr                         # Launch the platform
+  rebuttr stop                    # Stop running server
+  rebuttr status                  # Check if server is running
+  rebuttr papers add              # Add a new manuscript
+  rebuttr papers import data.json # Import existing review data
+  rebuttr config                  # Show config
 `);
 }
 
 // Config commands
 function showConfig() {
-    console.log(`\n${c.bold}ReviewFlow Configuration${c.reset}\n`);
+    console.log(`\n${c.bold}Rebuttr Configuration${c.reset}\n`);
     console.log(`  ${c.dim}Config file:${c.reset} ${GLOBAL_CONFIG_PATH}`);
     console.log(`  ${c.dim}Project folder:${c.reset} ${PROJECT_FOLDER}`);
     console.log(`  ${c.dim}Database:${c.reset} ${DB_PATH}`);
@@ -789,7 +789,7 @@ async function main() {
                 console.log();
             } else {
                 console.log(`\n${c.red}●${c.reset} ${c.bold}Server is not running${c.reset}`);
-                console.log(`  ${c.dim}Start with:${c.reset} reviewflow`);
+                console.log(`  ${c.dim}Start with:${c.reset} rebuttr`);
                 console.log();
             }
             break;
@@ -875,10 +875,10 @@ async function main() {
                 const key = args[2];
                 const value = args[3];
                 if (!key || value === undefined) {
-                    log.error('Usage: reviewflow config set <key> <value>');
+                    log.error('Usage: rebuttr config set <key> <value>');
                     log.info('Examples:');
-                    log.info('  reviewflow config set server.port 3002');
-                    log.info('  reviewflow config set ui.theme dark');
+                    log.info('  rebuttr config set server.port 3002');
+                    log.info('  rebuttr config set ui.theme dark');
                     process.exit(1);
                 }
                 setConfigValue(key, value);
@@ -901,7 +901,7 @@ async function main() {
             if (skillResult.skipped.length > 0) {
                 log.info(`Skipped (already exist): ${skillResult.skipped.join(', ')}`);
             }
-            log.info('Add a paper: reviewflow papers add');
+            log.info('Add a paper: rebuttr papers add');
             break;
 
         case 'skills':
@@ -934,9 +934,9 @@ async function main() {
             } else {
                 console.log(`
 ${c.bold}Skill Commands:${c.reset}
-  ${c.cyan}reviewflow skills list${c.reset}              List installed skills
-  ${c.cyan}reviewflow skills install${c.reset}           Install package skills
-  ${c.cyan}reviewflow skills install --force${c.reset}   Force reinstall (overwrites)
+  ${c.cyan}rebuttr skills list${c.reset}              List installed skills
+  ${c.cyan}rebuttr skills install${c.reset}           Install package skills
+  ${c.cyan}rebuttr skills install --force${c.reset}   Force reinstall (overwrites)
 `);
             }
             break;

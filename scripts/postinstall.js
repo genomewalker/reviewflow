@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ReviewFlow Post-Install Script
+ * Rebuttr Post-Install Script
  *
  * Runs after npm install to set up the environment:
  * - Verifies native module (better-sqlite3) compiled correctly
@@ -35,7 +35,7 @@ const c = supportsColor ? {
 
 // Paths
 const BASE_DIR = path.resolve(__dirname, '..');
-const PROJECT_FOLDER = path.join(os.homedir(), 'ReviewFlow');
+const PROJECT_FOLDER = path.join(os.homedir(), 'Rebuttr');
 const OPENCODE_SKILL_DIR = path.join(os.homedir(), '.config', 'opencode', 'skill');
 const PACKAGE_SKILL_DIR = path.join(BASE_DIR, 'skills');
 
@@ -115,12 +115,12 @@ function registerMcpServer() {
 
     // MCP server configuration (OpenCode format)
     const mcpConfig = {
-        'reviewflow-knowledge': {
+        'rebuttr-knowledge': {
             type: 'local',
-            command: ['reviewflow-mcp'],
+            command: ['rebuttr-mcp'],
             enabled: true,
             environment: {
-                REVIEWFLOW_API: 'http://localhost:3001'
+                REBUTTR_API: 'http://localhost:3001'
             }
         }
     };
@@ -149,8 +149,8 @@ function registerMcpServer() {
 
         // Only add if not already present (don't overwrite user customizations)
         let added = false;
-        if (!config.mcp['reviewflow-knowledge']) {
-            config.mcp['reviewflow-knowledge'] = mcpConfig['reviewflow-knowledge'];
+        if (!config.mcp['rebuttr-knowledge']) {
+            config.mcp['rebuttr-knowledge'] = mcpConfig['rebuttr-knowledge'];
             added = true;
         }
 
@@ -211,7 +211,7 @@ function checkBuildTools() {
 
 // Main
 function main() {
-    console.log(`\n${c.blue}${c.bold}ReviewFlow${c.reset} - Post-install setup\n`);
+    console.log(`\n${c.blue}${c.bold}Rebuttr${c.reset} - Post-install setup\n`);
 
     const platform = os.platform();
     const arch = os.arch();
@@ -248,7 +248,7 @@ function main() {
     const mcpResult = registerMcpServer();
     if (mcpResult.success) {
         if (mcpResult.added) {
-            console.log(`${c.green}✓${c.reset} Registered MCP server: ${c.cyan}reviewflow-knowledge${c.reset}`);
+            console.log(`${c.green}✓${c.reset} Registered MCP server: ${c.cyan}rebuttr-knowledge${c.reset}`);
         } else {
             console.log(`${c.dim}  MCP server already registered${c.reset}`);
         }
@@ -264,9 +264,9 @@ ${c.yellow}Prerequisites:${c.reset}
   - OpenCode CLI must be installed: ${c.cyan}npm i -g opencode-ai${c.reset}
 
 ${c.yellow}Quick start:${c.reset}
-  ${c.cyan}reviewflow${c.reset}              Launch the platform (starts server + opens browser)
-  ${c.cyan}reviewflow papers add${c.reset}   Add a new manuscript
-  ${c.cyan}reviewflow help${c.reset}         Show all commands
+  ${c.cyan}rebuttr${c.reset}              Launch the platform (starts server + opens browser)
+  ${c.cyan}rebuttr papers add${c.reset}   Add a new manuscript
+  ${c.cyan}rebuttr help${c.reset}         Show all commands
 
 ${c.dim}Data stored in: ${PROJECT_FOLDER}${c.reset}
 `);

@@ -1,12 +1,12 @@
 {
-  "name": "reviewflow",
+  "name": "rebuttr",
   "version": "2.0.0",
   "description": "AI-powered platform for managing peer review responses - supports multiple manuscripts",
   "main": "cli.js",
   "bin": {
-    "reviewflow": "./cli.js",
+    "rebuttr": "./cli.js",
     "paper-review": "./cli.js",
-    "reviewflow-mcp": "./mcp-knowledge-server.js"
+    "rebuttr-mcp": "./mcp-knowledge-server.js"
   },
   "scripts": {
     "start": "node cli.js",
@@ -32,12 +32,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/genomewalker/reviewflow.git"
+    "url": "git+https://github.com/genomewalker/rebuttr.git"
   },
   "bugs": {
-    "url": "https://github.com/genomewalker/reviewflow/issues"
+    "url": "https://github.com/genomewalker/rebuttr/issues"
   },
-  "homepage": "https://github.com/genomewalker/reviewflow#readme",
+  "homepage": "https://github.com/genomewalker/rebuttr#readme",
   "engines": {
     "node": ">=18.0.0"
   },

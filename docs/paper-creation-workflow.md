@@ -1,4 +1,4 @@
-# ReviewFlow Paper Creation Workflow
+# Rebuttr Paper Creation Workflow
 
 ## Overview Diagram
 

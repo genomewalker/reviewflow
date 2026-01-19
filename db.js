@@ -1,5 +1,5 @@
 /**
- * ReviewFlow Database Module
+ * Rebuttr Database Module
  *
  * SQLite database layer using better-sqlite3
  */

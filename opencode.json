@@ -1,12 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "reviewflow-knowledge": {
+    "rebuttr-knowledge": {
       "type": "local",
-      "command": ["reviewflow-mcp"],
+      "command": ["rebuttr-mcp"],
       "enabled": true,
       "environment": {
-        "REVIEWFLOW_API": "http://localhost:3001"
+        "REBUTTR_API": "http://localhost:3001"
       }
     }
   }
