@@ -5505,10 +5505,111 @@ a.task-queue-id:hover {
 }
 
 /* =====================================================
-   EXPORT PAGE STYLES
+   EXPORT PAGE STYLES (Clean Academic Design)
    ===================================================== */
 
-/* Main action banner */
+.export-page {
+    max-width: 800px;
+}
+
+.export-summary {
+    margin-bottom: var(--sp-6);
+    padding: var(--sp-4);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--sage);
+}
+
+.export-summary p {
+    margin: 0;
+    color: var(--ink-secondary);
+}
+
+.export-section {
+    margin-bottom: var(--sp-8);
+}
+
+.export-section h2 {
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: var(--sp-2);
+    padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--rule);
+}
+
+.export-section .section-desc {
+    color: var(--ink-light);
+    margin-bottom: var(--sp-4);
+}
+
+.export-actions {
+    display: flex;
+    gap: var(--sp-3);
+    flex-wrap: wrap;
+}
+
+.export-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.export-list-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    text-decoration: none;
+    color: var(--ink);
+    transition: all var(--transition-fast);
+}
+
+.export-list-item:hover {
+    border-color: var(--ink-light);
+    background: var(--paper-warm);
+}
+
+.export-list-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--paper-dark);
+    color: var(--ink-light);
+    flex-shrink: 0;
+}
+
+.export-list-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.export-list-text strong {
+    font-weight: 600;
+}
+
+.export-list-text small {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+}
+
+.export-preview-box {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: var(--sp-4);
+    max-height: 500px;
+    overflow-y: auto;
+    font-size: var(--text-sm);
+    line-height: 1.6;
+}
+
+/* Legacy export styles (keep for compatibility) */
 .export-banner {
     margin-bottom: var(--sp-8);
     background: var(--paper);

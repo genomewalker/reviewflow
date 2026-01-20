@@ -6794,191 +6794,69 @@ Your response:`;
         function renderExport() {
             const allComments = getAllComments();
             const completed = allComments.filter(c => c.status === 'completed');
+            const withResponse = allComments.filter(c => {
+                const expertData = expertDiscussions?.expert_discussions?.[c.id];
+                return c.draft_response || c.recommended_response || expertData?.recommended_response;
+            });
 
             const html = `
-                <!-- Manuscript Editing Feature - Main Action -->
-                <div class="export-banner">
-                    <div class="export-banner-inner">
-                        <div class="export-banner-icon">
-                            <i class="fas fa-magic"></i>
-                        </div>
-                        <div class="export-banner-content">
-                            <h3>Auto-Edit Manuscript</h3>
-                            <p>
-                                Automatically apply reviewer-requested changes to your manuscript with track changes.
-                                OpenCode will edit terminology, fix framing issues, and improve scientific accuracy while preserving your data and conclusions.
-                            </p>
-                            <div class="export-banner-stats">
-                                <div class="export-stat">
-                                    <div class="export-stat-value">8</div>
-                                    <div class="export-stat-label">Changes Applied</div>
-                                </div>
-                                <div class="export-stat">
-                                    <div class="export-stat-value">5</div>
-                                    <div class="export-stat-label">Terminology Fixes</div>
-                                </div>
-                                <div class="export-stat">
-                                    <div class="export-stat-value">2</div>
-                                    <div class="export-stat-label">Period Corrections</div>
-                                </div>
-                                <div class="export-stat">
-                                    <div class="export-stat-value">1</div>
-                                    <div class="export-stat-label">Method Fix</div>
-                                </div>
-                            </div>
-                            <div class="export-banner-actions">
-                                <a href="#" id="download-revised-link" download class="export-banner-btn primary">
-                                    <i class="fas fa-download"></i> Download Revised Manuscript
-                                </a>
-                                <button onclick="showEditDetails()" class="export-banner-btn secondary">
-                                    <i class="fas fa-list"></i> View Changes
-                                </button>
-                                <button onclick="requestNewEdit()" class="export-banner-btn secondary">
-                                    <i class="fas fa-redo"></i> Request New Edit
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="export-grid">
-                    <div class="export-card">
-                        <h3><i class="fas fa-file-word word"></i> Export Response Document</h3>
-                        <p>Generate a formatted response letter with all your reviewer responses.</p>
-                        <div class="export-options">
-                            <label class="export-option">
-                                <input type="checkbox" checked id="export-completed">
-                                <span>Include completed responses (${completed.length})</span>
-                            </label>
-                            <label class="export-option">
-                                <input type="checkbox" id="export-draft">
-                                <span>Include draft responses</span>
-                            </label>
-                            <label class="export-option">
-                                <input type="checkbox" checked id="export-original">
-                                <span>Include original reviewer comments</span>
-                            </label>
-                        </div>
-                        <button onclick="exportToWord()" class="export-card-btn word">
-                            <i class="fas fa-download"></i> Generate Response Document
-                        </button>
+                <div class="export-page">
+                    <!-- Progress Summary -->
+                    <div class="export-summary card">
+                        <p><strong>${withResponse.length}</strong> of <strong>${allComments.length}</strong> comments have responses ready for export.
+                        ${completed.length > 0 ? ` (${completed.length} marked as completed)` : ''}</p>
                     </div>
 
-                    <div class="export-card featured">
-                        <h3><i class="fas fa-robot ai"></i> Generate AI Rebuttal Letter</h3>
-                        <p>Use AI to generate a professional rebuttal letter from your draft responses. Creates a polished document with:</p>
-                        <ul class="export-features">
-                            <li><i class="fas fa-check"></i> Major Changes summary section</li>
-                            <li><i class="fas fa-check"></i> Formatted reviewer comments (italic)</li>
-                            <li><i class="fas fa-check"></i> Polished author responses</li>
-                            <li><i class="fas fa-check"></i> Manuscript quotes with line references</li>
-                        </ul>
-                        <button onclick="generateAIRebuttal()" class="export-card-btn ai" id="ai-rebuttal-btn">
-                            <i class="fas fa-magic"></i> Generate Rebuttal Letter
-                        </button>
-                        <p class="export-note">Requires draft responses for comments</p>
-                    </div>
+                    <!-- Generate Rebuttal Section -->
+                    <section class="export-section">
+                        <h2>Generate Rebuttal Letter</h2>
+                        <p class="section-desc">Create a professional point-by-point response document formatted for journal submission.</p>
 
-                    <div class="export-card">
-                        <h3><i class="fas fa-file-code json"></i> Export JSON Data</h3>
-                        <p>Export all review data as JSON for backup or import into another platform.</p>
-                        <button onclick="exportJSON()" class="export-card-btn json">
-                            <i class="fas fa-download"></i> Download JSON
-                        </button>
-                    </div>
-
-                    <div class="export-card">
-                        <h3><i class="fas fa-chart-bar summary"></i> Export Summary Report</h3>
-                        <p>Generate a summary report of the review process and responses.</p>
-                        <button onclick="exportSummary()" class="export-card-btn summary">
-                            <i class="fas fa-file-alt"></i> Generate Summary
-                        </button>
-                    </div>
-
-                    <div class="export-card">
-                        <h3><i class="fas fa-sync sync"></i> Sync Progress</h3>
-                        <p>Save your progress to browser storage or load previous work.</p>
-                        <div style="display: flex; gap: var(--sp-3);">
-                            <button onclick="saveProgress()" class="export-card-btn sync" style="flex: 1;">
-                                <i class="fas fa-save"></i> Save
+                        <div class="export-actions">
+                            <button onclick="generateAIRebuttal()" class="btn btn-primary" id="ai-rebuttal-btn">
+                                <i class="fas fa-file-word"></i> Generate Rebuttal Letter
                             </button>
-                            <button onclick="loadNewManuscript()" class="btn btn-secondary" style="flex: 1;">
-                                <i class="fas fa-upload"></i> Load
+                            <button onclick="exportToWord()" class="btn btn-secondary">
+                                <i class="fas fa-download"></i> Simple Export
                             </button>
                         </div>
-                    </div>
-                </div>
+                    </section>
 
-                <!-- Changes Applied Section -->
-                <div id="edit-details" class="export-changes-panel hidden">
-                    <h3><i class="fas fa-check-circle"></i> Track Changes Applied</h3>
-                    <div class="export-changes-list">
-                        <div class="export-change-item terminology">
-                            <span class="export-change-badge">R1-3a</span>
-                            <div class="export-change-content">
-                                <p>Replaced "time-traveling" with "long-dormant"</p>
-                                <p class="desc">Present terminology as hypothesis rather than established fact</p>
-                            </div>
+                    <!-- Other Options -->
+                    <section class="export-section">
+                        <h2>Data Export</h2>
+                        <div class="export-list">
+                            <a href="#" onclick="exportJSON(); return false;" class="export-list-item">
+                                <span class="export-list-icon"><i class="fas fa-file-code"></i></span>
+                                <span class="export-list-text">
+                                    <strong>Export JSON</strong>
+                                    <small>Backup all review data</small>
+                                </span>
+                            </a>
+                            <a href="#" onclick="exportSummary(); return false;" class="export-list-item">
+                                <span class="export-list-icon"><i class="fas fa-chart-pie"></i></span>
+                                <span class="export-list-text">
+                                    <strong>Summary Report</strong>
+                                    <small>Statistics and progress overview</small>
+                                </span>
+                            </a>
+                            <a href="#" onclick="saveProgress(); return false;" class="export-list-item">
+                                <span class="export-list-icon"><i class="fas fa-save"></i></span>
+                                <span class="export-list-text">
+                                    <strong>Save Progress</strong>
+                                    <small>Save to browser storage</small>
+                                </span>
+                            </a>
                         </div>
-                        <div class="export-change-item terminology">
-                            <span class="export-change-badge">R1-3b</span>
-                            <div class="export-change-content">
-                                <p>Replaced "time-travelling" with "long-dormant"</p>
-                                <p class="desc">British spelling variant also updated</p>
-                            </div>
-                        </div>
-                        <div class="export-change-item terminology">
-                            <span class="export-change-badge">R3-1a</span>
-                            <div class="export-change-content">
-                                <p>Replaced "pioneer microbial communities" with "depositional-era microbial communities"</p>
-                                <p class="desc">More neutral, scientifically precise terminology</p>
-                            </div>
-                        </div>
-                        <div class="export-change-item terminology">
-                            <span class="export-change-badge">R3-1b</span>
-                            <div class="export-change-content">
-                                <p>Replaced "pioneer methanogens" with "ancient methanogens"</p>
-                                <p class="desc">Avoids loaded "pioneer" terminology</p>
-                            </div>
-                        </div>
-                        <div class="export-change-item terminology">
-                            <span class="export-change-badge">R3-1c</span>
-                            <div class="export-change-content">
-                                <p>Replaced "pioneering microbes" with "depositional-era microbes"</p>
-                                <p class="desc">Consistent terminology throughout</p>
-                            </div>
-                        </div>
-                        <div class="export-change-item period">
-                            <span class="export-change-badge">R1-5</span>
-                            <div class="export-change-content">
-                                <p>Replaced "Pliocene/Pleistocene transition" with "Early Pleistocene interglacial"</p>
-                                <p class="desc">Correct geological period based on dating evidence</p>
-                            </div>
-                        </div>
-                        <div class="export-change-item method">
-                            <span class="export-change-badge">R1-29</span>
-                            <div class="export-change-content">
-                                <p>Removed "novel" from "novel method"</p>
-                                <p class="desc">Appropriate for describing cited methods</p>
-                            </div>
-                        </div>
-                        <div class="export-change-item method">
-                            <span class="export-change-badge">R1-29b</span>
-                            <div class="export-change-content">
-                                <p>Removed "novel" from "novel approach"</p>
-                                <p class="desc">Consistent modesty in method descriptions</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                    </section>
 
-                <div class="export-preview-panel">
-                    <h3>Response Preview</h3>
-                    <div class="export-preview-content">
-                        <div id="response-preview">
+                    <!-- Response Preview -->
+                    <section class="export-section">
+                        <h2>Response Preview</h2>
+                        <div class="export-preview-box">
                             ${generateResponsePreview()}
                         </div>
-                    </div>
+                    </section>
                 </div>
             `;
             document.getElementById('content-area').innerHTML = html;
