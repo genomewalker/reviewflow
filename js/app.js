@@ -8502,10 +8502,15 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
             }
 
             const allComments = getAllComments();
-            const withResponse = allComments.filter(c => c.draft_response);
+
+            // Check for responses - either draft_response or recommended_response from experts
+            const withResponse = allComments.filter(c => {
+                const expertData = expertDiscussions?.expert_discussions?.[c.id];
+                return c.draft_response || c.recommended_response || expertData?.recommended_response;
+            });
 
             if (withResponse.length === 0) {
-                alert('No draft responses found. Please write responses to some comments first before generating the rebuttal letter.');
+                alert('No responses found. Please generate expert analysis for comments or write draft responses first.');
                 return;
             }
 
@@ -8519,19 +8524,27 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                 }
 
                 // Prepare the data for AI processing
+                // Use draft_response if available, otherwise use recommended_response from experts
                 const rebuttalData = {
                     manuscript: reviewData.manuscript,
                     reviewers: reviewData.reviewers.map(r => ({
                         name: r.name,
                         expertise: r.expertise || '',
-                        comments: r.comments.filter(c => c.draft_response).map(c => ({
-                            id: c.id,
-                            type: c.type,
-                            category: c.category,
-                            original_text: c.original_text,
-                            draft_response: c.draft_response,
-                            location: c.location
-                        }))
+                        comments: r.comments
+                            .map(c => {
+                                const expertData = expertDiscussions?.expert_discussions?.[c.id];
+                                const response = c.draft_response || c.recommended_response || expertData?.recommended_response;
+                                if (!response) return null;
+                                return {
+                                    id: c.id,
+                                    type: c.type,
+                                    category: c.category,
+                                    original_text: c.original_text,
+                                    draft_response: response,
+                                    location: c.location
+                                };
+                            })
+                            .filter(Boolean)
                     })).filter(r => r.comments.length > 0)
                 };
 
