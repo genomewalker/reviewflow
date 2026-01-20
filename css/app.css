@@ -1605,6 +1605,38 @@ a.comment-id:hover,
     font-size: var(--text-sm);
 }
 
+/* Chat message actions (Use in Response button) */
+.chat-message-actions {
+    margin-top: var(--sp-2);
+    padding-top: var(--sp-2);
+    border-top: 1px solid var(--rule);
+    display: flex;
+    gap: var(--sp-2);
+}
+
+.use-in-response-btn {
+    font-size: var(--text-xs);
+    color: var(--scholar);
+    background: transparent;
+    border: 1px solid var(--scholar);
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    transition: all 0.15s ease;
+}
+
+.use-in-response-btn:hover {
+    background: var(--scholar);
+    color: white;
+}
+
+.use-in-response-btn i {
+    font-size: 10px;
+}
+
 /* Chat welcome message */
 .chat-welcome {
     text-align: center;
@@ -7446,4 +7478,62 @@ kbd {
         opacity: 0;
         transform: translate(-50%, 10px);
     }
+}
+
+/* =====================================================
+   MANUSCRIPT CONTEXT - Line Reference Display
+   ===================================================== */
+.manuscript-context-box {
+    background: var(--paper-aged);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--scholar);
+    padding: var(--sp-3);
+    margin-top: var(--sp-3);
+    border-radius: 4px;
+}
+
+.manuscript-context-label {
+    font-size: var(--text-sm);
+    color: var(--ink-secondary);
+    margin-bottom: var(--sp-2);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.manuscript-context-label i {
+    color: var(--scholar);
+}
+
+.manuscript-context-text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: var(--sp-3);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.manuscript-context-text .highlighted-line {
+    background: var(--ochre-bg);
+    color: var(--ochre);
+    font-weight: 600;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Compact version for card view */
+.comment-card .manuscript-context-box {
+    margin-top: var(--sp-2);
+}
+
+.comment-card .manuscript-context-text {
+    max-height: 200px;
+    font-size: 11px;
 }

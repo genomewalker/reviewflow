@@ -3251,6 +3251,20 @@ User question: ${message}`;
                 // Make comment IDs clickable (e.g., R1-1, R2-3)
                 parsedHtml = makeCommentIdsClickable(parsedHtml);
                 bubbleDiv.innerHTML = `<div class="text-sm prose prose-sm max-w-none">${parsedHtml}</div>`;
+
+                // Add "Use in Response" button for assistant messages
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'chat-message-actions';
+                actionsDiv.innerHTML = `
+                    <button class="use-in-response-btn" title="Insert this into your response">
+                        <i class="fas fa-arrow-right"></i> Use in Response
+                    </button>
+                `;
+                // Store raw content for insertion
+                actionsDiv.querySelector('.use-in-response-btn').addEventListener('click', () => {
+                    useChatInResponse(content);
+                });
+                bubbleDiv.appendChild(actionsDiv);
             } else {
                 bubbleDiv.innerHTML = `<p class="text-sm">${escapeHtml(content)}</p>`;
             }
@@ -3260,6 +3274,64 @@ User question: ${message}`;
 
             // Scroll to bottom
             messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        // Insert chat content into response builder
+        function useChatInResponse(content) {
+            // Check if response builder modal is open
+            const responseEl = document.getElementById('edit-response');
+
+            if (responseEl && editingComment) {
+                // Modal is open - append content to response
+                const currentContent = responseEl.value;
+                const newContent = currentContent
+                    ? currentContent + '\n\n' + content
+                    : content;
+                responseEl.value = newContent;
+                responseEl.dispatchEvent(new Event('input')); // Trigger preview update
+
+                // Update comment data
+                const reviewer = reviewData.reviewers.find(r => r.id === editingComment.reviewerId);
+                const comment = reviewer?.comments.find(c => c.id === editingComment.commentId);
+                if (comment) {
+                    comment.draft_response = newContent;
+                }
+
+                showNotification('Content added to response!', 'success');
+                scheduleAutoSave();
+            } else if (commentChatContext) {
+                // No modal open but we have a chat context - open that comment
+                const commentId = commentChatContext.id;
+                // Find the comment's reviewer
+                for (const reviewer of reviewData.reviewers) {
+                    const comment = reviewer.comments.find(c => c.id === commentId);
+                    if (comment) {
+                        // Store content to insert after modal opens
+                        window._pendingChatContent = content;
+                        openCommentModal(reviewer.id, comment.id);
+                        // Insert content after modal is ready
+                        setTimeout(() => {
+                            const el = document.getElementById('edit-response');
+                            if (el && window._pendingChatContent) {
+                                el.value = (el.value ? el.value + '\n\n' : '') + window._pendingChatContent;
+                                el.dispatchEvent(new Event('input'));
+                                window._pendingChatContent = null;
+                                showNotification('Content added to response!', 'success');
+                                scheduleAutoSave();
+                            }
+                        }, 100);
+                        return;
+                    }
+                }
+                showNotification('Could not find comment to update', 'error');
+            } else {
+                // No context - copy to clipboard as fallback
+                navigator.clipboard.writeText(content).then(() => {
+                    showNotification('Content copied to clipboard! Open a comment to paste.', 'info');
+                }).catch(() => {
+                    showNotification('Please open a comment first to use this content.', 'warning');
+                });
+            }
         }
 
         // Escape HTML to prevent XSS
@@ -4483,7 +4555,14 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                                 <p class="full-comment-label"><i class="fas fa-quote-left"></i> Full Reviewer Comment:</p>
                                 <p class="full-comment-text">${comment.original_text}</p>
                             </div>
-                            ${fullContext ? `
+                            ${comment.location ? `
+                                <div class="manuscript-context-box">
+                                    <p class="manuscript-context-label"><i class="fas fa-file-alt"></i> Manuscript Reference: <strong>${comment.location}</strong></p>
+                                    ${comment.full_context ? `
+                                        <pre class="manuscript-context-text">${comment.full_context.replace(/>>>/g, '<mark class="highlighted-line">&gt;&gt;&gt;</mark>')}</pre>
+                                    ` : ''}
+                                </div>
+                            ` : fullContext ? `
                                 <div class="context-box">
                                     <p class="context-label"><i class="fas fa-info-circle"></i> Additional Context:</p>
                                     <p class="context-text">${fullContext}</p>
@@ -4643,33 +4722,41 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
         function extractDynamicExperts() {
             // Priority 1: Use paper-level experts if available (these are the 3-4 consistent experts)
             if (expertDiscussions?.experts && Array.isArray(expertDiscussions.experts) && expertDiscussions.experts.length > 0) {
-                // Count how many comments each expert has analyzed
-                const commentCounts = {};
+                // Count comments and collect comment IDs for each expert
+                const commentData = {};
                 if (expertDiscussions?.expert_discussions) {
                     for (const [commentId, discussion] of Object.entries(expertDiscussions.expert_discussions)) {
                         if (discussion.experts && Array.isArray(discussion.experts)) {
                             for (const expert of discussion.experts) {
                                 const key = expert.name?.toLowerCase().trim();
                                 if (key) {
-                                    commentCounts[key] = (commentCounts[key] || 0) + 1;
+                                    if (!commentData[key]) {
+                                        commentData[key] = { count: 0, comments: [] };
+                                    }
+                                    commentData[key].count++;
+                                    commentData[key].comments.push(commentId);
                                 }
                             }
                         }
                     }
                 }
 
-                return expertDiscussions.experts.map(expert => ({
-                    name: expert.name,
-                    icon: expert.icon || 'user-graduate',
-                    color: expert.color || 'blue',
-                    expertise: Array.isArray(expert.expertise) ? expert.expertise : [],
-                    comment_types: expert.comment_types || [],
-                    // How many comments this expert analyzed
-                    commentsAnalyzed: commentCounts[expert.name?.toLowerCase().trim()] || 0,
-                    description: Array.isArray(expert.expertise) && expert.expertise.length > 0
-                        ? expert.expertise.slice(0, 3).join(', ')
-                        : 'Domain Expert'
-                }));
+                return expertDiscussions.experts.map(expert => {
+                    const key = expert.name?.toLowerCase().trim();
+                    const data = commentData[key] || { count: 0, comments: [] };
+                    return {
+                        name: expert.name,
+                        icon: expert.icon || 'user-graduate',
+                        color: expert.color || 'blue',
+                        expertise: Array.isArray(expert.expertise) ? expert.expertise : [],
+                        comment_types: expert.comment_types || [],
+                        comments: data.comments,
+                        commentsAnalyzed: data.count,
+                        description: Array.isArray(expert.expertise) && expert.expertise.length > 0
+                            ? expert.expertise.slice(0, 3).join(', ')
+                            : (expert.description || 'Domain Expert')
+                    };
+                });
             }
 
             // Fallback: Extract unique experts from individual comment discussions
@@ -4896,14 +4983,15 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
         async function loadExpertDiscussions() {
             // Priority 1: Always try server first (source of truth)
             try {
-                const response = await fetch(`${API_BASE}/db/experts`);
+                const response = await fetch(`${API_BASE}/db/experts?paper_id=${currentPaperId}`);
                 if (response.ok) {
                     const result = await response.json();
-                    if (result.success && result.data && result.data.expert_discussions) {
-                        const count = Object.keys(result.data.expert_discussions).length;
-                        if (count > 0) {
+                    if (result.success && result.data) {
+                        const discussionCount = Object.keys(result.data.expert_discussions || {}).length;
+                        const expertCount = result.data.experts?.length || 0;
+                        if (discussionCount > 0 || expertCount > 0) {
                             expertDiscussions = result.data;
-                            console.log('Expert discussions loaded from server:', count, 'discussions');
+                            console.log(`Expert discussions loaded from server: ${discussionCount} discussions, ${expertCount} paper-level experts`);
                             return;
                         }
                     }
@@ -4917,7 +5005,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                 const response = await fetch('expert_discussions.json');
                 if (response.ok) {
                     expertDiscussions = await response.json();
-                    console.log('Expert discussions loaded from JSON file');
+                    console.log('Expert discussions loaded from JSON file, experts:', expertDiscussions?.experts?.length || 0);
                     return;
                 }
             } catch (e) {
@@ -7077,6 +7165,12 @@ Your response:`;
                         </div>
                     </div>
                     <div class="rb-comment-text">${comment.original_text}</div>
+                    ${comment.location && comment.full_context ? `
+                    <div class="manuscript-context-box" style="margin-top: var(--sp-3);">
+                        <p class="manuscript-context-label"><i class="fas fa-file-alt"></i> Manuscript Reference: <strong>${comment.location}</strong></p>
+                        <pre class="manuscript-context-text">${comment.full_context.replace(/>>>/g, '<mark class="highlighted-line">&gt;&gt;&gt;</mark>')}</pre>
+                    </div>
+                    ` : ''}
                 </div>
 
                 <!-- Two Column Layout -->

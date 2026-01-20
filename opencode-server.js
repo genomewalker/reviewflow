@@ -104,6 +104,27 @@ function registerPaper(paperId, hash, metadata = {}) {
     }
 }
 
+// Restore a soft-deleted paper (clear deleted_at)
+function restorePaper(paperId) {
+    if (!db) return false;
+
+    try {
+        const stmt = db.prepare(`
+            UPDATE papers SET deleted_at = NULL, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `);
+        const result = stmt.run(paperId);
+        if (result.changes > 0) {
+            log(`Restored soft-deleted paper ${paperId}`);
+            return true;
+        }
+        return false;
+    } catch (e) {
+        log(`Error restoring paper: ${e.message}`, 'ERROR');
+        return false;
+    }
+}
+
 // Update paper metadata after parsing
 function updatePaperMetadata(paperId, metadata) {
     if (!db) return false;
@@ -124,16 +145,311 @@ function updatePaperMetadata(paperId, metadata) {
 }
 
 // Store parsed reviewers and comments in database
-function storeParsedData(paperId, parsedData) {
+// Normalize comment ID to ensure consistent format (R1.1, R2.3, etc.)
+function normalizeCommentId(id, reviewerNum, commentNum) {
+    if (!id) return `R${reviewerNum}.${commentNum}`;
+
+    // Remove common prefixes like "major-", "minor-", etc.
+    let normalized = id.replace(/^(major|minor|comment|issue)-/i, '');
+
+    // If it doesn't match R#.# pattern, generate a proper one
+    if (!/^R\d+\.\d+$/i.test(normalized)) {
+        // Try to extract any numbers from the ID
+        const match = normalized.match(/(\d+)\.(\d+)/);
+        if (match) {
+            normalized = `R${match[1]}.${match[2]}`;
+        } else {
+            normalized = `R${reviewerNum}.${commentNum}`;
+        }
+    }
+
+    return normalized;
+}
+
+// Extract line references from comment text (e.g., "Line 45", "Lines 97-99", "L45")
+function extractLineReferences(text) {
+    if (!text) return null;
+
+    const patterns = [
+        /[Ll]ines?\s+(\d+)\s*[-–to]+\s*(\d+)/g,  // "Lines 97-99", "Line 97 to 99"
+        /[Ll]ines?\s+(\d+)/g,                      // "Line 45", "line 45"
+        /[Ll](\d+)/g,                              // "L45"
+        /\(lines?\s+(\d+)(?:\s*[-–]\s*(\d+))?\)/gi // "(line 45)" or "(lines 97-99)"
+    ];
+
+    const references = [];
+
+    for (const pattern of patterns) {
+        let match;
+        const regex = new RegExp(pattern.source, pattern.flags);
+        while ((match = regex.exec(text)) !== null) {
+            const startLine = parseInt(match[1], 10);
+            const endLine = match[2] ? parseInt(match[2], 10) : startLine;
+            references.push({ start: startLine, end: endLine });
+        }
+    }
+
+    // Remove duplicates and sort by start line
+    const unique = [];
+    const seen = new Set();
+    for (const ref of references) {
+        const key = `${ref.start}-${ref.end}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(ref);
+        }
+    }
+
+    return unique.length > 0 ? unique.sort((a, b) => a.start - b.start) : null;
+}
+
+// Extract text from PDF with line numbers preserved using pdftotext -layout
+function extractPdfWithLineNumbers(pdfPath) {
+    try {
+        const { execSync } = require('child_process');
+        const rawText = execSync(`pdftotext -layout "${pdfPath}" -`, {
+            encoding: 'utf-8',
+            maxBuffer: 50 * 1024 * 1024
+        });
+
+        // Parse lines and extract line numbers from the left margin
+        // Format: "  102   This is the text content..."
+        const lines = rawText.split('\n');
+        const numberedLines = {};
+        let lastLineNum = 0;
+
+        for (const line of lines) {
+            // Match line number at start (with possible leading spaces) followed by text
+            // Pattern: optional spaces, 1-4 digit number, at least 2 spaces, then text
+            const match = line.match(/^\s*(\d{1,4})\s{2,}(.+)$/);
+            if (match) {
+                const lineNum = parseInt(match[1], 10);
+                const text = match[2].trim();
+                // Only accept if line number is sequential (within reasonable range)
+                if (lineNum > 0 && lineNum < 10000 && (lineNum > lastLineNum || lineNum === 1)) {
+                    numberedLines[lineNum] = text;
+                    lastLineNum = lineNum;
+                }
+            }
+        }
+
+        if (Object.keys(numberedLines).length > 50) {
+            // Convert to array format for easier access
+            const maxLine = Math.max(...Object.keys(numberedLines).map(Number));
+            const textArray = [];
+            for (let i = 1; i <= maxLine; i++) {
+                textArray.push(numberedLines[i] || '');
+            }
+            log(`[PDF] Extracted ${Object.keys(numberedLines).length} numbered lines from PDF`);
+            return textArray.join('\n');
+        }
+
+        log(`[PDF] PDF doesn't appear to have standard line numbers, falling back to raw text`);
+        return rawText;
+    } catch (e) {
+        log(`[PDF] Error extracting PDF: ${e.message}`, 'WARN');
+        return null;
+    }
+}
+
+// Find and extract manuscript text, preferring PDFs with line numbers
+function extractManuscriptText(paperDir) {
+    const fs = require('fs');
+    const path = require('path');
+
+    // Priority 1: Look for PDF files (likely have line numbers from journal submission)
+    const pdfFiles = [];
+    const mdFiles = [];
+    const docxFiles = [];
+
+    // Check main paper directory and manuscript subdirectory
+    const dirsToCheck = [paperDir, path.join(paperDir, 'manuscript')];
+
+    for (const dir of dirsToCheck) {
+        if (!fs.existsSync(dir)) continue;
+
+        const files = fs.readdirSync(dir);
+        for (const file of files) {
+            const fullPath = path.join(dir, file);
+            const ext = path.extname(file).toLowerCase();
+            const stats = fs.statSync(fullPath);
+
+            if (!stats.isFile()) continue;
+            if (file.startsWith('_') || file.startsWith('.')) continue;
+
+            // Prioritize files that look like manuscripts (not supplements/tables)
+            const isLikelyManuscript = !file.toLowerCase().includes('sup') &&
+                                       !file.toLowerCase().includes('table') &&
+                                       !file.toLowerCase().includes('review');
+
+            if (ext === '.pdf' && isLikelyManuscript) {
+                pdfFiles.push(fullPath);
+            } else if ((ext === '.md' || ext === '.txt') && isLikelyManuscript) {
+                mdFiles.push(fullPath);
+            } else if ((ext === '.docx' || ext === '.doc') && isLikelyManuscript) {
+                docxFiles.push(fullPath);
+            }
+        }
+    }
+
+    // Try PDF first (best for line numbers)
+    for (const pdfPath of pdfFiles) {
+        const text = extractPdfWithLineNumbers(pdfPath);
+        if (text && text.split('\n').length > 100) {
+            log(`[Manuscript] Using PDF: ${path.basename(pdfPath)}`);
+            return text;
+        }
+    }
+
+    // Try markdown/text files
+    for (const mdPath of mdFiles) {
+        try {
+            const text = fs.readFileSync(mdPath, 'utf-8');
+            if (text.split('\n').length > 100) {
+                log(`[Manuscript] Using markdown: ${path.basename(mdPath)}`);
+                return text;
+            }
+        } catch (e) { /* continue */ }
+    }
+
+    // Try docx files with pandoc
+    for (const docxPath of docxFiles) {
+        try {
+            const { execSync } = require('child_process');
+            const text = execSync(`pandoc -t plain "${docxPath}"`, {
+                encoding: 'utf-8',
+                maxBuffer: 50 * 1024 * 1024
+            });
+            if (text.split('\n').length > 100) {
+                log(`[Manuscript] Using docx: ${path.basename(docxPath)}`);
+                return text;
+            }
+        } catch (e) { /* continue */ }
+    }
+
+    log(`[Manuscript] No suitable manuscript found in ${paperDir}`, 'WARN');
+    return null;
+}
+
+// Get manuscript lines with context around the referenced lines
+function getManuscriptContext(manuscriptText, lineRefs, contextLines = 3) {
+    if (!manuscriptText || !lineRefs || lineRefs.length === 0) return null;
+
+    const lines = manuscriptText.split('\n');
+    const contexts = [];
+
+    for (const ref of lineRefs) {
+        const start = Math.max(0, ref.start - contextLines - 1); // -1 for 0-indexing
+        const end = Math.min(lines.length, ref.end + contextLines);
+
+        const contextBlock = {
+            reference: ref.start === ref.end ? `Line ${ref.start}` : `Lines ${ref.start}-${ref.end}`,
+            startLine: start + 1,
+            endLine: end,
+            lines: []
+        };
+
+        for (let i = start; i < end; i++) {
+            const lineNum = i + 1;
+            const isReferenced = lineNum >= ref.start && lineNum <= ref.end;
+            contextBlock.lines.push({
+                number: lineNum,
+                text: lines[i] || '',
+                highlighted: isReferenced
+            });
+        }
+
+        contexts.push(contextBlock);
+    }
+
+    return contexts;
+}
+
+// Format manuscript context for storage (compact text format)
+function formatManuscriptContext(contexts) {
+    if (!contexts || contexts.length === 0) return null;
+
+    const parts = [];
+    for (const ctx of contexts) {
+        const header = `[${ctx.reference}]`;
+        const body = ctx.lines.map(l => {
+            const marker = l.highlighted ? '>>>' : '   ';
+            return `${marker} ${l.number}: ${l.text}`;
+        }).join('\n');
+        parts.push(`${header}\n${body}`);
+    }
+
+    return parts.join('\n\n');
+}
+
+// Infer priority from comment type and content when AI doesn't provide it
+function inferPriority(comment) {
+    // If AI provided a valid priority, use it
+    if (comment.priority && ['high', 'medium', 'low'].includes(comment.priority.toLowerCase())) {
+        return comment.priority.toLowerCase();
+    }
+
+    const text = (comment.original_text || '').toLowerCase();
+    const type = (comment.type || 'minor').toLowerCase();
+
+    // HIGH priority indicators - fundamental issues that could affect acceptance
+    const highIndicators = [
+        'unconvinced', 'reject', 'insufficient', 'fundamental', 'critical',
+        'cannot accept', 'major concern', 'serious', 'flawed', 'unsupported',
+        'not demonstrated', 'lack of evidence', 'must be addressed',
+        'strongly recommend', 'essential', 'required analysis', 'tip dating',
+        'validation', 'authentication'
+    ];
+
+    // LOW priority indicators - cosmetic/minor fixes
+    const lowIndicators = [
+        'typo', 'formatting', 'citation', 'please cite', 'add version',
+        'remove the point', 'line \\d+:', 'please fix', 'should be',
+        'change to', 'rephrase', 'unclear what', 'define the acronym',
+        'please add', 'please provide', 'what module', 'what version'
+    ];
+
+    // Check for high priority
+    if (type === 'major') {
+        for (const indicator of highIndicators) {
+            if (text.includes(indicator)) {
+                return 'high';
+            }
+        }
+        // Major comments default to medium
+        return 'medium';
+    }
+
+    // Check for low priority (minor comments)
+    for (const indicator of lowIndicators) {
+        if (new RegExp(indicator, 'i').test(text)) {
+            return 'low';
+        }
+    }
+
+    // Minor comments default to low
+    if (type === 'minor') {
+        return 'low';
+    }
+
+    return 'medium';
+}
+
+function storeParsedData(paperId, parsedData, manuscriptText = null) {
     if (!db) return false;
 
     try {
         // Start transaction
         db.exec('BEGIN TRANSACTION');
 
-        // Clear existing reviewers and comments for this paper
-        db.prepare('DELETE FROM reviewers WHERE paper_id = ?').run(paperId);
+        // Clear existing data for this paper (in order of foreign key dependencies)
+        // First delete from tables that reference comments
+        db.prepare('DELETE FROM expert_discussions WHERE comment_id IN (SELECT id FROM comments WHERE paper_id = ?)').run(paperId);
+        db.prepare('DELETE FROM version_history WHERE comment_id IN (SELECT id FROM comments WHERE paper_id = ?)').run(paperId);
+        db.prepare('DELETE FROM chat_history WHERE paper_id = ?').run(paperId);
+        // Then delete comments and reviewers
         db.prepare('DELETE FROM comments WHERE paper_id = ?').run(paperId);
+        db.prepare('DELETE FROM reviewers WHERE paper_id = ?').run(paperId);
 
         // Insert reviewers and their comments
         const insertReviewer = db.prepare(`
@@ -143,12 +459,14 @@ function storeParsedData(paperId, parsedData) {
 
         const insertComment = db.prepare(`
             INSERT INTO comments (id, paper_id, reviewer_id, reviewer_name, type, category,
-                                  original_text, priority, tags, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                                  original_text, priority, tags, status, location, full_context)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
         `);
 
         const reviewers = parsedData.reviewers || [];
-        for (const reviewer of reviewers) {
+        for (let rIdx = 0; rIdx < reviewers.length; rIdx++) {
+            const reviewer = reviewers[rIdx];
+            const reviewerNum = rIdx + 1;
             const reviewerId = `${paperId}_${reviewer.id}`;
 
             // Insert reviewer
@@ -163,8 +481,27 @@ function storeParsedData(paperId, parsedData) {
 
             // Insert comments
             const comments = reviewer.comments || [];
-            for (const comment of comments) {
-                const commentId = `${paperId}_${comment.id}`;
+            for (let cIdx = 0; cIdx < comments.length; cIdx++) {
+                const comment = comments[cIdx];
+                const normalizedId = normalizeCommentId(comment.id, reviewerNum, cIdx + 1);
+                const commentId = `${paperId}_${normalizedId}`;  // Include paperId prefix for unique primary key
+
+                // Extract line references and manuscript context
+                let location = null;
+                let fullContext = null;
+                if (manuscriptText) {
+                    const lineRefs = extractLineReferences(comment.original_text);
+                    if (lineRefs && lineRefs.length > 0) {
+                        // Format location as comma-separated references
+                        location = lineRefs.map(r =>
+                            r.start === r.end ? `Line ${r.start}` : `Lines ${r.start}-${r.end}`
+                        ).join(', ');
+                        // Get manuscript context
+                        const contexts = getManuscriptContext(manuscriptText, lineRefs, 3);
+                        fullContext = formatManuscriptContext(contexts);
+                    }
+                }
+
                 insertComment.run(
                     commentId,
                     paperId,
@@ -173,8 +510,10 @@ function storeParsedData(paperId, parsedData) {
                     comment.type || 'minor',
                     comment.category || 'General',
                     comment.original_text || '',
-                    comment.priority || 'medium',
-                    JSON.stringify(comment.tags || [])
+                    inferPriority(comment),
+                    JSON.stringify(comment.tags || []),
+                    location,
+                    fullContext
                 );
             }
         }
@@ -979,12 +1318,37 @@ function saveExpertToDB(commentId, expertData) {
 }
 
 // Load all expert discussions from database
-function loadExpertsFromDB() {
+function loadExpertsFromDB(paperId = null) {
     if (!db) throw new Error('Database not initialized');
 
     try {
+        // Load paper-level experts from suggested_experts table
+        let paperExperts = [];
+        if (paperId) {
+            try {
+                const expertRows = db.prepare(`
+                    SELECT name, icon, color, expertise, comment_types, description
+                    FROM suggested_experts
+                    WHERE paper_id = ? AND is_confirmed = 1
+                    ORDER BY id
+                `).all(paperId);
+
+                paperExperts = expertRows.map(row => ({
+                    name: row.name,
+                    icon: row.icon || 'user-graduate',
+                    color: row.color || 'blue',
+                    expertise: JSON.parse(row.expertise || '[]'),
+                    comment_types: JSON.parse(row.comment_types || '[]'),
+                    description: row.description || ''
+                }));
+            } catch (tableErr) {
+                // Table might not exist yet - that's OK
+                log(`suggested_experts table not available: ${tableErr.message}`, 'DEBUG');
+            }
+        }
+
         // Join expert_discussions with comments to get full context
-        // Comment IDs in expert_discussions are like "R1.1" but in comments table they're like "2a4cb568_R1.1"
+        // Comment IDs in expert_discussions now have paper prefix like "14464bea_R1.1"
         const rows = db.prepare(`
             SELECT
                 e.comment_id,
@@ -998,7 +1362,7 @@ function loadExpertsFromDB() {
                 c.category,
                 c.original_text as reviewer_comment
             FROM expert_discussions e
-            LEFT JOIN comments c ON c.id LIKE '%_' || e.comment_id
+            LEFT JOIN comments c ON c.id = e.comment_id
         `).all();
         const discussions = {};
 
@@ -1014,7 +1378,10 @@ function loadExpertsFromDB() {
                 ];
             }
 
-            discussions[row.comment_id] = {
+            // Strip paper prefix from comment_id for webapp compatibility
+            // DB has "14464bea_R1.1" but webapp uses "R1.1"
+            const shortId = row.comment_id.replace(/^[a-f0-9]+_/, '');
+            discussions[shortId] = {
                 experts: JSON.parse(row.experts || '[]'),
                 recommended_response: row.recommended_response,
                 advice_to_author: row.advice_to_author,
@@ -1027,7 +1394,11 @@ function loadExpertsFromDB() {
             };
         }
 
-        return { expert_discussions: discussions };
+        // Return both paper-level experts and per-comment discussions
+        return {
+            experts: paperExperts.length > 0 ? paperExperts : undefined,
+            expert_discussions: discussions
+        };
     } catch (e) {
         log(`Error loading experts from DB: ${e.message}`, 'ERROR');
         return null;
@@ -1289,10 +1660,18 @@ Best suited for: ${expert.comment_types?.join(', ') || 'general comments'}
 
     // Step 3: Generate expert analysis for each comment
     const allComments = [];
+    let reviewerNum = 0;
     for (const reviewer of (parsed.reviewers || [])) {
+        reviewerNum++;
+        let commentNum = 0;
         for (const comment of (reviewer.comments || [])) {
+            commentNum++;
+            const normalizedId = normalizeCommentId(comment.id, reviewerNum, commentNum);
+            const dbCommentId = `${paperId}_${normalizedId}`;
             allComments.push({
                 ...comment,
+                id: normalizedId,
+                db_id: dbCommentId,
                 reviewer_name: reviewer.name,
                 reviewer_id: reviewer.id
             });
@@ -1329,10 +1708,10 @@ Best suited for: ${expert.comment_types?.join(', ') || 'general comments'}
         }
 
         if (analysis.experts) {
-            expertDiscussions[comment.id] = analysis;
+            expertDiscussions[comment.db_id || comment.id] = analysis;
 
             // Save to database
-            saveExpertToDB(comment.id, analysis);
+            saveExpertToDB(comment.db_id || comment.id, analysis);
         }
 
         // Small delay to avoid overwhelming the API
@@ -3138,6 +3517,8 @@ function startApiServer(port = 3001) {
                             priority: c.priority || 'medium',
                             status: c.status || 'pending',
                             draft_response: c.draft_response || '',
+                            location: c.location || null,
+                            full_context: c.full_context || null,
                             tags: c.tags ? (c.tags.startsWith('[') ? JSON.parse(c.tags) : c.tags.split(',').map(t => t.trim())) : []
                         }))
                 }));
@@ -3588,11 +3969,13 @@ function startApiServer(port = 3001) {
             try {
                 log(`[Background] Starting processing job ${jobId} for paper ${paperId}`);
 
-                // Load current session settings
-                const session = loadSession();
-                const modelToUse = session.model || 'github-copilot/gpt-5.2';
-                const agentToUse = session.agent || 'general';
-                const variantToUse = session.variant || 'high';
+                // Load paper-specific session settings (contains the AI config selected by user)
+                const paperSession = getPaperSession(paperId);
+                const fallbackConfig = loadConfig();
+                const modelToUse = paperSession?.model || fallbackConfig.model || 'github-copilot/gpt-5.2';
+                const agentToUse = paperSession?.agent || fallbackConfig.agent || 'general';
+                const variantToUse = paperSession?.variant || fallbackConfig.variant || 'high';
+                log(`[Background] Using model=${modelToUse}, agent=${agentToUse}, variant=${variantToUse}`);
 
                 // Callback for real-time AI reasoning updates - verbose output like webapp chat
                 const streamProgress = (event) => {
@@ -3637,6 +4020,7 @@ function startApiServer(port = 3001) {
 
                 // Collect all processed/converted files for context attachment
                 const processedFiles = [];
+                let manuscriptPlainText = null;  // For line reference context
 
                 // Step 1: Process MANUSCRIPT files first (establish paper context)
                 const manuscripts = savedFiles.filter(f => f.category === 'manuscript');
@@ -3661,6 +4045,24 @@ function startApiServer(port = 3001) {
                         progress: Math.round((fileIndex / (totalFiles + 1)) * 100),
                         log: `[${fileIndex}/${totalFiles}] Loading manuscript: ${file.name}${isConverted ? ' (converted)' : ''}`
                     });
+
+                    // Extract plain text from manuscript for line reference context
+                    if (!manuscriptPlainText) {
+                        try {
+                            if (file.ext === '.docx' || file.ext === '.doc') {
+                                const { execSync } = require('child_process');
+                                manuscriptPlainText = execSync(`pandoc -t plain "${file.path}"`, {
+                                    encoding: 'utf-8',
+                                    maxBuffer: 50 * 1024 * 1024
+                                });
+                                log(`[Background] Extracted manuscript text: ${manuscriptPlainText.split('\n').length} lines`);
+                            } else if (['.md', '.txt', '.text'].includes(file.ext)) {
+                                manuscriptPlainText = fs.readFileSync(file.path, 'utf-8');
+                            }
+                        } catch (convErr) {
+                            log(`[Background] Could not extract manuscript text: ${convErr.message}`, 'WARN');
+                        }
+                    }
 
                     // For file loading: DON'T use AI sessions - just add to processed files
                     // All files will be attached to the summary/analysis steps
@@ -3826,7 +4228,7 @@ WRITING STYLE:
 
 OUTPUT ONLY THE JSON.`;
 
-                const result = await runOpencode({
+                let result = await runOpencode({
                     message: summaryPrompt,
                     files: budgetResult.files, // Smart selection within token budget
                     model: modelToUse,
@@ -3839,22 +4241,101 @@ OUTPUT ONLY THE JSON.`;
                 });
 
                 // Parse the JSON response from result.output
+                log(`[Background] runOpencode returned, output length: ${result?.output?.length || 0}, isStuck: ${result?.isStuck}`);
                 let parsed = null;
-                const output = result.output || '';
+                let output = result.output || '';
+
+                // Try to extract JSON from output
+                const tryParseJson = (text) => {
+                    try {
+                        const jsonMatch = text.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            return JSON.parse(jsonMatch[0]);
+                        }
+                    } catch (e) {
+                        log(`[Background] JSON parse attempt failed: ${e.message}`);
+                    }
+                    return null;
+                };
+
+                parsed = tryParseJson(output);
+
+                // ORCHESTRATOR PATTERN: If AI is stuck or no JSON found, send follow-up to resolve
+                if (!parsed && (result.isStuck || output.length > 0)) {
+                    log(`[Background] AI appears stuck or incomplete - using orchestrator to resolve`);
+                    updateProcessingJob(jobId, {
+                        current_step: 'orchestrating',
+                        log: 'AI requested clarification - orchestrator resolving...'
+                    });
+
+                    // Create orchestrator prompt that answers any questions and re-requests JSON
+                    const orchestratorPrompt = `The previous AI assistant started processing but may have asked questions or not completed the task.
+
+PREVIOUS AI OUTPUT:
+${output.substring(0, 3000)}${output.length > 3000 ? '...[truncated]' : ''}
+
+YOUR TASK: Complete the extraction that was requested. Answer any questions the previous AI asked with reasonable defaults:
+- If asked about format: Use the JSON format specified
+- If asked about scope: Extract ALL comments from ALL reviewers
+- If asked which approach: Choose the most comprehensive approach
+- If asked about ambiguity: Make reasonable assumptions and proceed
+
+NOW OUTPUT THE COMPLETE JSON with this exact structure:
+{
+  "paper": { "title": "...", "field": "..." },
+  "reviewers": [
+    {
+      "id": "reviewer-1",
+      "name": "Referee #1",
+      "expertise": "...",
+      "overall_sentiment": "critical|positive|mixed",
+      "comments": [
+        {
+          "id": "R1.1",
+          "type": "major|minor",
+          "category": "...",
+          "original_text": "exact quote",
+          "summary": "brief summary",
+          "priority": "high|medium|low",
+          "tags": ["tag1", "tag2"]
+        }
+      ]
+    }
+  ]
+}
+
+OUTPUT ONLY THE JSON. No explanations, no questions.`;
+
+                    const orchestratorResult = await runOpencode({
+                        message: orchestratorPrompt,
+                        files: budgetResult.files,
+                        model: modelToUse,
+                        agent: agentToUse,
+                        variant: variantToUse,
+                        timeout: 600000,
+                        cwd: paperDir,
+                        onProgress: streamProgress
+                    });
+
+                    log(`[Background] Orchestrator returned, output length: ${orchestratorResult?.output?.length || 0}`);
+
+                    if (orchestratorResult.output) {
+                        output = orchestratorResult.output;
+                        parsed = tryParseJson(output);
+                        if (parsed) {
+                            log(`[Background] Orchestrator successfully extracted JSON with ${parsed.reviewers?.length || 0} reviewers`);
+                        }
+                    }
+                }
+
                 updateProcessingJob(jobId, {
                     current_step: 'parsing',
-                    log: `Parsing OpenCode response (${output.length} chars)...`
+                    log: `Parsing response (${output.length} chars)...`
                 });
 
-                try {
-                    const jsonMatch = output.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) {
-                        parsed = JSON.parse(jsonMatch[0]);
-                    }
-                } catch (parseErr) {
-                    updateProcessingJob(jobId, {
-                        log: `Parse warning: ${parseErr.message}`
-                    });
+                if (!parsed) {
+                    log(`[Background] Final parse attempt on output`);
+                    parsed = tryParseJson(output);
                 }
 
                 if (parsed) {
@@ -3869,64 +4350,23 @@ OUTPUT ONLY THE JSON.`;
 
                     // Update paper metadata in database
                     const paperMeta = parsed.paper || parsed.metadata || {};
-                    const dbPath = path.join(PROJECT_FOLDER, 'data', 'review_platform.db');
-                    const paperDb = new Database(dbPath);
-
-                    // Update paper metadata (but DON'T set status to 'parsed' yet -
-                    // we need to wait for expert review step)
-                    paperDb.prepare(`
-                        UPDATE papers SET
-                            title = COALESCE(?, title),
-                            authors = COALESCE(?, authors),
-                            journal = COALESCE(?, journal),
-                            field = COALESCE(?, field),
-                            updated_at = datetime('now')
-                        WHERE id = ?
-                    `).run(paperMeta.title, paperMeta.authors, paperMeta.journal, paperMeta.field, paperId);
-
-                    // Save reviewers and comments
-                    let totalComments = 0;
-                    if (parsed.reviewers && parsed.reviewers.length > 0) {
-                        for (const reviewer of parsed.reviewers) {
-                            // Insert reviewer with expertise info
-                            paperDb.prepare(`
-                                INSERT OR REPLACE INTO reviewers (id, paper_id, name, expertise, overall_assessment)
-                                VALUES (?, ?, ?, ?, ?)
-                            `).run(
-                                reviewer.id,
-                                paperId,
-                                reviewer.name,
-                                reviewer.expertise || '',
-                                reviewer.overall_sentiment || reviewer.recommendation || ''
-                            );
-
-                            // Insert comments with all fields
-                            if (reviewer.comments) {
-                                for (const comment of reviewer.comments) {
-                                    const tags = Array.isArray(comment.tags) ? JSON.stringify(comment.tags) : '[]';
-                                    paperDb.prepare(`
-                                        INSERT OR REPLACE INTO comments
-                                        (id, paper_id, reviewer_id, reviewer_name, original_text, type, category, priority, tags, status, sort_order)
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-                                    `).run(
-                                        comment.id,
-                                        paperId,
-                                        reviewer.id,
-                                        reviewer.name,
-                                        comment.original_text || comment.text || '',
-                                        comment.type || 'minor',
-                                        comment.category || 'General',
-                                        comment.priority || 'medium',
-                                        tags,
-                                        totalComments
-                                    );
-                                    totalComments++;
-                                }
-                            }
-                        }
+                    if (paperMeta.title || paperMeta.authors || paperMeta.journal || paperMeta.field) {
+                        updatePaperMetadata(paperId, paperMeta);
                     }
 
-                    paperDb.close();
+                    // Try to extract manuscript text from PDF with line numbers (more accurate)
+                    // Falls back to markdown/docx if no PDF available
+                    const pdfManuscriptText = extractManuscriptText(paperDir);
+                    const finalManuscriptText = pdfManuscriptText || manuscriptPlainText;
+
+                    // Use centralized storeParsedData function for reviewers/comments
+                    // This ensures consistent ID normalization, priority inference, and line reference extraction
+                    const stored = storeParsedData(paperId, parsed, finalManuscriptText);
+                    if (!stored) {
+                        log(`[Background] Warning: Failed to store parsed data for ${paperId}`, 'WARN');
+                    }
+
+                    const totalComments = (parsed.reviewers || []).reduce((sum, r) => sum + (r.comments?.length || 0), 0);
 
                     // Step 5: Generate expert SUGGESTIONS (not full analysis yet)
                     // The user will review/modify these before continuing
@@ -4419,10 +4859,18 @@ Best suited for: ${expert.comment_types?.join(', ') || 'general comments'}
                 // Step 2: Generate expert analysis for MAJOR comments only
                 // Minor comments (typos, formatting) don't need expert analysis
                 const allComments = [];
+                let reviewerNum = 0;
                 for (const reviewer of (parsed.reviewers || [])) {
+                    reviewerNum++;
+                    let commentNum = 0;
                     for (const comment of (reviewer.comments || [])) {
+                        commentNum++;
+                        const normalizedId = normalizeCommentId(comment.id, reviewerNum, commentNum);
+                        const dbCommentId = `${paperId}_${normalizedId}`;
                         allComments.push({
                             ...comment,
+                            id: normalizedId,  // Use normalized ID for display
+                            db_id: dbCommentId,  // Full ID for database operations
                             reviewer_name: reviewer.name,
                             reviewer_id: reviewer.id
                         });
@@ -4465,8 +4913,8 @@ Best suited for: ${expert.comment_types?.join(', ') || 'general comments'}
                         );
 
                         if (analysis?.experts) {
-                            expertDiscussions[comment.id] = analysis;
-                            const saved = saveExpertToDB(comment.id, analysis);
+                            expertDiscussions[comment.db_id || comment.id] = analysis;
+                            const saved = saveExpertToDB(comment.db_id || comment.id, analysis);
                             log(`[Background] ${comment.id}: ${analysis.experts.length} experts, saved=${saved}`);
                         } else {
                             log(`[Background] No experts in response for ${comment.id}, will retry`, 'WARN');
@@ -4500,8 +4948,8 @@ Best suited for: ${expert.comment_types?.join(', ') || 'general comments'}
                             );
 
                             if (analysis?.experts) {
-                                expertDiscussions[comment.id] = analysis;
-                                saveExpertToDB(comment.id, analysis);
+                                expertDiscussions[comment.db_id || comment.id] = analysis;
+                                saveExpertToDB(comment.db_id || comment.id, analysis);
                                 log(`[Background] Retry succeeded for ${comment.id}`);
                             } else {
                                 log(`[Background] Retry failed for ${comment.id} - no experts`, 'WARN');
@@ -5144,12 +5592,14 @@ except Exception as e:
             return;
         }
 
-        // GET /db/experts - load all expert discussions
-        if (req.method === 'GET' && req.url === '/db/experts') {
+        // GET /db/experts - load all expert discussions (with optional paper_id for paper-level experts)
+        if (req.method === 'GET' && req.url.startsWith('/db/experts')) {
             try {
-                const data = loadExpertsFromDB();
+                const urlParams = new URL(req.url, `http://${req.headers.host}`).searchParams;
+                const paperId = urlParams.get('paper_id');
+                const data = loadExpertsFromDB(paperId);
                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ success: true, data, storage: 'sqlite' }));
+                res.end(JSON.stringify({ success: true, data, storage: 'sqlite', paper_id: paperId }));
             } catch (e) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: false, error: e.message }));
@@ -5364,11 +5814,12 @@ except Exception as e:
                         return;
                     }
 
+                    const config = loadConfig();
                     const result = await queryWorkerSession(
                         paperId, worker, question, outputDir,
-                        model || 'github-copilot/gpt-5-mini',
-                        agent || 'build',
-                        variant || 'low'
+                        model || config.model,
+                        agent || config.agent || 'build',
+                        variant || config.variant || 'medium'
                     );
 
                     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -5663,12 +6114,13 @@ Respond with ONLY a JSON object listing which file(s) to query and what specific
 If the question can be answered from the inventory summaries alone, respond with:
 {"answer": "your answer based on inventory", "queries": []}`;
 
+                    const routingConfig = loadConfig();
                     const routingResult = await runOpencode({
                         message: routingPrompt,
                         files: [],
-                        model: 'github-copilot/gpt-5-mini',
-                        agent: 'general',
-                        variant: 'low',
+                        model: model || routingConfig.model,
+                        agent: agent || routingConfig.agent || 'general',
+                        variant: 'low',  // Keep low for routing decisions (fast)
                         timeout: 30000,
                         cwd: paperDir
                     });
@@ -5890,6 +6342,9 @@ Provide a clear, consolidated answer:`;
                         // Create session for this paper with AI config
                         createPaperSession(paperId, aiConfig);
                     } else {
+                        // Restore paper if it was soft-deleted
+                        restorePaper(paperId);
+
                         // Ensure directories exist for existing paper
                         if (!fs.existsSync(manuscriptDir)) fs.mkdirSync(manuscriptDir, { recursive: true });
                         if (!fs.existsSync(reviewsDir)) fs.mkdirSync(reviewsDir, { recursive: true });
@@ -5953,8 +6408,16 @@ Provide a clear, consolidated answer:`;
             req.on('data', chunk => body += chunk);
             req.on('end', async () => {
                 try {
-                    const { paper_id, model, agent, variant } = JSON.parse(body);
+                    const requestData = JSON.parse(body);
+                    const paper_id = requestData.paper_id;
                     const paperDir = path.join(PROJECT_FOLDER, 'papers', paper_id);
+
+                    // Load model/agent/variant from: request > paper session > config file > defaults
+                    const paperSession = getPaperSession(paper_id);
+                    const globalConfig = loadConfig();
+                    const model = requestData.model || paperSession?.model || globalConfig.model || 'github-copilot/gpt-5-mini';
+                    const agent = requestData.agent || paperSession?.agent || globalConfig.agent || 'general';
+                    const variant = requestData.variant || paperSession?.variant || globalConfig.variant || 'high';
 
                     // Check if parsing is already in progress for this paper
                     const existingLock = parsingLocks.get(paper_id);
@@ -6078,10 +6541,10 @@ Provide a clear, consolidated answer:`;
 
                     // Create session for this paper - starts fresh (no inherited session ID)
                     // We'll capture the session ID from the first call and reuse it for context continuity
-                    let paperSession = {
-                        model: model || 'github-copilot/gpt-5.2',
-                        agent: agent || 'general',
-                        variant: variant || 'high',
+                    let paperSessionObj = {
+                        model: model,
+                        agent: agent,
+                        variant: variant,
                         paper_id: paper_id,
                         opencode_session_id: null  // Fresh start - no context from other papers
                     };
@@ -6094,6 +6557,9 @@ Provide a clear, consolidated answer:`;
                             });
                         }
                     };
+
+                    // Variable to store manuscript plain text for line reference context
+                    let manuscriptPlainText = null;
 
                     // === STEP 1: Load manuscript to extract metadata ===
                     if (manuscriptFilesToUse.length > 0) {
@@ -6139,7 +6605,7 @@ OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no explanation):
 }`;
 
                         // Call OpenCode with the original file - let it use skills
-                        const manuscriptResult = await callOpencode(manuscriptPrompt, paperSession, [manuscriptFile], paperDir, streamProgress);
+                        const manuscriptResult = await callOpencode(manuscriptPrompt, paperSessionObj, [manuscriptFile], paperDir, streamProgress);
 
                         if (manuscriptResult.error) {
                             log(`Manuscript parse warning: ${manuscriptResult.error}`, 'WARN');
@@ -6154,9 +6620,28 @@ OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no explanation):
                             }
                             // Capture session ID for context continuity in subsequent calls
                             if (manuscriptResult.sessionId) {
-                                paperSession.opencode_session_id = manuscriptResult.sessionId;
+                                paperSessionObj.opencode_session_id = manuscriptResult.sessionId;
                                 log(`Session established: ${manuscriptResult.sessionId}`);
                             }
+                        }
+
+                        // Convert manuscript to plain text for line reference context
+                        try {
+                            if (manuscriptExt === '.docx') {
+                                // Use pandoc to convert docx to plain text
+                                const { execSync } = require('child_process');
+                                manuscriptPlainText = execSync(`pandoc -t plain "${manuscriptFile}"`, {
+                                    encoding: 'utf-8',
+                                    maxBuffer: 50 * 1024 * 1024
+                                });
+                                log(`Converted manuscript to text: ${manuscriptPlainText.split('\\n').length} lines`);
+                            } else if (['.md', '.txt', '.text'].includes(manuscriptExt)) {
+                                // Read plain text directly
+                                manuscriptPlainText = fs.readFileSync(manuscriptFile, 'utf-8');
+                                log(`Read manuscript text: ${manuscriptPlainText.split('\\n').length} lines`);
+                            }
+                        } catch (convErr) {
+                            log(`Could not convert manuscript to text: ${convErr.message}`, 'WARN');
                         }
                     }
 
@@ -6193,17 +6678,30 @@ ${paperMetadata.title ? `Context: This review is for the paper "${paperMetadata.
 TASK: Read the attached review document and extract ALL reviewer comments.
 
 For each reviewer found, extract:
-1. Reviewer identifier (e.g., "Reviewer 1", "Reviewer 2", or their actual name)
+1. Reviewer identifier (e.g., "Reviewer 1", "Reviewer 2", "Referee #1", or their actual name)
 2. Their overall sentiment (positive/neutral/critical)
 3. Their inferred expertise area
 
-For each comment, extract:
-1. Whether it's major or minor
-2. Category (e.g., "Methodology", "Statistical Analysis", "Data Presentation", "Writing Clarity", etc.)
-3. Priority (high/medium/low based on how critical the comment seems)
-4. The exact original text
-5. A brief summary
-6. Relevant tags
+For each comment, ALL of these fields are REQUIRED (do NOT omit any):
+1. "id": Use format R{reviewer#}.{comment#} (e.g., "R1.1", "R1.2")
+2. "type": Either "major" or "minor"
+   - major = substantive concerns about methodology, validity, interpretation, missing analyses
+   - minor = line edits, typos, citation fixes, clarification requests, formatting
+3. "category": E.g., "Methodology", "Statistical Analysis", "Data Presentation", "Writing Clarity", "Authentication", "Validation"
+4. "original_text": The exact verbatim text of the comment
+5. "summary": Brief 1-sentence summary
+6. "priority": *** REQUIRED - YOU MUST INCLUDE THIS FIELD FOR EVERY COMMENT ***
+   Assign exactly one of: "high", "medium", or "low"
+   - "high" = requests new analyses, questions core validity, fundamental flaws, rejection risk
+   - "medium" = requests clarification, additional data, moderate revisions
+   - "low" = typos, formatting, citations, cosmetic changes
+   Rule of thumb: major+fundamental→high, major+clarification→medium, minor→low
+7. "tags": Array of relevant keywords
+
+COMMENT ID FORMAT - STRICTLY follow this pattern:
+- Use format "R{reviewer_number}.{comment_number}" e.g., "R1.1", "R1.2", "R2.1", "R3.1"
+- Do NOT prefix with type (wrong: "major-R1.1", correct: "R1.1")
+- Number comments sequentially per reviewer starting at 1
 
 OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no explanation):
 {
@@ -6217,17 +6715,37 @@ OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no explanation):
         {
           "id": "R1.1",
           "type": "major",
-          "category": "category name",
-          "original_text": "exact comment text",
-          "summary": "brief summary",
+          "category": "Methodology",
+          "original_text": "The validation approach is insufficient...",
+          "summary": "Requests additional validation analysis",
           "priority": "high",
-          "tags": ["tag1", "tag2"],
+          "tags": ["validation", "methodology"],
+          "requires_revision": true
+        },
+        {
+          "id": "R1.2",
+          "type": "major",
+          "category": "Data Presentation",
+          "original_text": "Figure 3 would benefit from...",
+          "summary": "Suggests improvements to figure",
+          "priority": "medium",
+          "tags": ["figures"],
+          "requires_revision": true
+        },
+        {
+          "id": "R1.3",
+          "type": "minor",
+          "category": "Writing Clarity",
+          "original_text": "Line 45: typo in 'recieved'",
+          "summary": "Typo correction",
+          "priority": "low",
+          "tags": ["typo"],
           "requires_revision": true
         }
       ]
     }
   ],
-  "categories_found": ["list", "of", "categories"],
+  "categories_found": ["Methodology", "Data Presentation", "Writing Clarity"],
   "thematic_groups": {
     "group_name": {
       "description": "what this group covers",
@@ -6237,7 +6755,7 @@ OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no explanation):
 }`;
 
                         // Call OpenCode with original file - use same session for context
-                        const reviewResult = await callOpencode(reviewPrompt, paperSession, [reviewFile], paperDir, streamProgress);
+                        const reviewResult = await callOpencode(reviewPrompt, paperSessionObj, [reviewFile], paperDir, streamProgress);
 
                         if (reviewResult.error) {
                             log(`Review file ${fileName} parse error: ${reviewResult.error}`, 'WARN');
@@ -6245,8 +6763,8 @@ OUTPUT FORMAT - Return ONLY valid JSON (no markdown, no explanation):
                         }
 
                         // Capture session ID if not already set
-                        if (reviewResult.sessionId && !paperSession.opencode_session_id) {
-                            paperSession.opencode_session_id = reviewResult.sessionId;
+                        if (reviewResult.sessionId && !paperSessionObj.opencode_session_id) {
+                            paperSessionObj.opencode_session_id = reviewResult.sessionId;
                             log(`Session established: ${reviewResult.sessionId}`);
                         }
 
@@ -6349,7 +6867,7 @@ Return ONLY valid JSON (no other text):
   "final_categories": ["category1", "category2"]
 }`;
 
-                        const groupResult = await callOpencode(groupPrompt, paperSession, [], paperDir, streamProgress);
+                        const groupResult = await callOpencode(groupPrompt, paperSessionObj, [], paperDir, streamProgress);
                         if (!groupResult.error) {
                             const groupData = extractJSON(groupResult.text || '');
                             if (groupData) {
@@ -6405,8 +6923,13 @@ Return ONLY valid JSON (no other text):
 
                     log(`Parse complete: ${parsedData.reviewers?.length || 0} reviewers, ${parsedData.parse_info?.total_comments || 0} comments, ${parsedData.categories?.length || 0} categories`);
 
-                    // Store parsed data in database
-                    storeParsedData(paper_id, parsedData);
+                    // Try to extract manuscript text from PDF with line numbers (more accurate)
+                    // paperDir already declared above
+                    const pdfManuscriptText = extractManuscriptText(paperDir);
+                    const finalManuscriptText = pdfManuscriptText || manuscriptPlainText;
+
+                    // Store parsed data in database (with manuscript text for line reference context)
+                    storeParsedData(paper_id, parsedData, finalManuscriptText);
 
                     // Update paper metadata in database
                     if (parsedData.paper) {
@@ -6522,68 +7045,36 @@ Return ONLY valid JSON (no other text):
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, (SELECT content_hash FROM papers WHERE id = ?))
                     `).run(paperId, title, authors, journal, field, 'Imported from uploaded files', new Date().toISOString().split('T')[0], config, paperId);
 
-                    // Add reviewers and comments from parsed data
+                    // Add reviewers and comments from parsed data using centralized function
                     let totalComments = 0;
                     const reviewers = parsedData?.reviewers || [];
 
-                    if (reviewers.length > 0) {
-                        // Use AI-parsed data
-                        for (const reviewer of reviewers) {
-                            const reviewerId = reviewer.id || `reviewer-${reviewers.indexOf(reviewer) + 1}`;
-
-                            paperDb.prepare(`
-                                INSERT INTO reviewers (id, paper_id, name, expertise, overall_assessment)
-                                VALUES (?, ?, ?, ?, ?)
-                            `).run(
-                                reviewerId,
-                                paperId,
-                                reviewer.name || `Reviewer ${reviewers.indexOf(reviewer) + 1}`,
-                                reviewer.expertise || '',
-                                reviewer.overall_sentiment || ''
-                            );
-
-                            // Add comments for this reviewer
-                            const comments = reviewer.comments || [];
-                            for (const comment of comments) {
-                                const commentId = comment.id || `${reviewerId}-${comments.indexOf(comment) + 1}`;
-                                const tags = Array.isArray(comment.tags) ? JSON.stringify(comment.tags) : '[]';
-
-                                paperDb.prepare(`
-                                    INSERT INTO comments (id, paper_id, reviewer_id, type, category, original_text, status, priority, tags)
-                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                `).run(
-                                    commentId,
-                                    paperId,
-                                    reviewerId,
-                                    comment.type || 'minor',
-                                    comment.category || 'General',
-                                    comment.original_text || '',
-                                    'pending',
-                                    comment.priority || 'medium',
-                                    tags
-                                );
-                                totalComments++;
-                            }
-                        }
+                    if (reviewers.length > 0 && parsedData) {
+                        // Use centralized storeParsedData for consistent processing
+                        paperDb.close();  // Close db before calling storeParsedData (it uses global db)
+                        storeParsedData(paperId, parsedData, null);  // No manuscript text in this path
+                        totalComments = reviewers.reduce((sum, r) => sum + (r.comments?.length || 0), 0);
                     } else {
                         // Fallback: create placeholder reviewer and comment
+                        const placeholderReviewerId = `${paperId}_reviewer-1`;
+                        const placeholderCommentId = `${paperId}_R1.1`;
+
                         paperDb.prepare(`
                             INSERT INTO reviewers (id, paper_id, name, expertise, overall_assessment)
                             VALUES (?, ?, ?, ?, ?)
-                        `).run('reviewer-1', paperId, 'Reviewer 1', '', 'Comments to be parsed');
+                        `).run(placeholderReviewerId, paperId, 'Reviewer 1', '', 'Comments to be parsed');
 
                         paperDb.prepare(`
                             INSERT INTO comments (id, paper_id, reviewer_id, type, category, original_text, status, priority)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         `).run(
-                            'R1.1', paperId, 'reviewer-1', 'major', 'Setup',
+                            placeholderCommentId, paperId, placeholderReviewerId, 'major', 'Setup',
                             'Files have been uploaded. Use the AI chat to help parse and organize the reviewer comments from your uploaded documents.',
                             'pending', 'high'
                         );
                         totalComments = 1;
+                        paperDb.close();
                     }
-
-                    paperDb.close();
 
                     // Update paper status to complete
                     updatePaperStatus(paperId, 'complete');
