@@ -3750,6 +3750,179 @@ function startApiServer(port = 3001) {
             return;
         }
 
+        // POST /papers/:id/export/ai-rebuttal - generate professional AI rebuttal letter
+        const aiRebuttalMatch = req.url.match(/^\/papers\/([^/]+)\/export\/ai-rebuttal$/);
+        if (req.method === 'POST' && aiRebuttalMatch) {
+            const paperId = aiRebuttalMatch[1];
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                (async () => {
+                try {
+                    const rebuttalData = JSON.parse(body);
+
+                    // Generate professional rebuttal document
+                    const children = [];
+
+                    // Title
+                    children.push(new Paragraph({
+                        heading: HeadingLevel.TITLE,
+                        children: [new TextRun({ text: "Response to Reviewers", bold: true, size: 36 })],
+                        spacing: { after: 200 }
+                    }));
+
+                    // Manuscript title
+                    if (rebuttalData.manuscript?.title) {
+                        children.push(new Paragraph({
+                            children: [
+                                new TextRun({ text: "Manuscript: ", bold: true }),
+                                new TextRun({ text: rebuttalData.manuscript.title, italics: true })
+                            ],
+                            spacing: { after: 400 }
+                        }));
+                    }
+
+                    // Introduction paragraph
+                    children.push(new Paragraph({
+                        children: [new TextRun({
+                            text: "We thank the reviewers for their careful evaluation of our manuscript and their constructive feedback. We have addressed all comments and made revisions accordingly. In this document, we provide point-by-point responses to each reviewer's comments. Reviewer comments are shown in italics, followed by our responses.",
+                            size: 22
+                        })],
+                        spacing: { after: 400 }
+                    }));
+
+                    // Horizontal line
+                    children.push(new Paragraph({
+                        border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '000000' } },
+                        spacing: { after: 400 }
+                    }));
+
+                    // Process each reviewer
+                    for (const reviewer of rebuttalData.reviewers || []) {
+                        if (!reviewer.comments || reviewer.comments.length === 0) continue;
+
+                        // Reviewer header
+                        children.push(new Paragraph({
+                            heading: HeadingLevel.HEADING_1,
+                            children: [new TextRun({ text: reviewer.name, bold: true, size: 28 })],
+                            spacing: { before: 400, after: 200 }
+                        }));
+
+                        // Thank reviewer
+                        children.push(new Paragraph({
+                            children: [new TextRun({
+                                text: `We thank ${reviewer.name.replace(/\(.*\)/, '').trim()} for their thoughtful review and valuable suggestions.`,
+                                size: 22
+                            })],
+                            spacing: { after: 300 }
+                        }));
+
+                        // Process each comment
+                        for (const comment of reviewer.comments) {
+                            // Comment number header
+                            children.push(new Paragraph({
+                                children: [
+                                    new TextRun({ text: `Comment ${comment.id}`, bold: true, size: 24 }),
+                                    comment.type === 'major'
+                                        ? new TextRun({ text: ' [MAJOR]', bold: true, color: 'DC2626', size: 20 })
+                                        : new TextRun({ text: ' [minor]', color: '6B7280', size: 20 })
+                                ],
+                                spacing: { before: 300, after: 100 }
+                            }));
+
+                            // Reviewer comment (italic, indented, gray background)
+                            const commentLines = (comment.original_text || '').split('\n');
+                            for (const line of commentLines) {
+                                if (line.trim()) {
+                                    children.push(new Paragraph({
+                                        children: [new TextRun({ text: line, italics: true, size: 22 })],
+                                        indent: { left: 400 },
+                                        shading: { type: ShadingType.CLEAR, fill: 'F3F4F6' },
+                                        spacing: { after: 50 }
+                                    }));
+                                }
+                            }
+
+                            // Spacing after reviewer comment
+                            children.push(new Paragraph({ spacing: { after: 150 } }));
+
+                            // Author response header
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: "Response:", bold: true, color: '059669', size: 22 })],
+                                spacing: { after: 100 }
+                            }));
+
+                            // Response text
+                            const responseLines = (comment.draft_response || '[No response provided]').split('\n');
+                            for (const line of responseLines) {
+                                if (line.trim()) {
+                                    // Check if line contains manuscript quote (text between quotes or starting with line numbers)
+                                    const isQuote = line.match(/^[""].*[""]$/) || line.match(/^\(lines?\s*\d+/i) || line.match(/^".*"$/);
+
+                                    if (isQuote) {
+                                        children.push(new Paragraph({
+                                            children: [new TextRun({ text: line, color: '2563EB', size: 22 })],
+                                            indent: { left: 600 },
+                                            spacing: { after: 50 }
+                                        }));
+                                    } else {
+                                        children.push(new Paragraph({
+                                            children: [new TextRun({ text: line, size: 22 })],
+                                            indent: { left: 400 },
+                                            spacing: { after: 50 }
+                                        }));
+                                    }
+                                }
+                            }
+
+                            // Separator line
+                            children.push(new Paragraph({
+                                border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' } },
+                                spacing: { before: 200, after: 200 }
+                            }));
+                        }
+                    }
+
+                    // Create document
+                    const doc = new Document({
+                        styles: {
+                            default: {
+                                document: {
+                                    run: { font: "Times New Roman", size: 24 }
+                                }
+                            }
+                        },
+                        sections: [{
+                            properties: {
+                                page: {
+                                    size: { width: 12240, height: 15840 }, // Letter size
+                                    margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+                                }
+                            },
+                            children: children
+                        }]
+                    });
+
+                    const buffer = await Packer.toBuffer(doc);
+                    const filename = `rebuttal_letter_${paperId}.docx`;
+
+                    res.writeHead(200, {
+                        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'Content-Disposition': `attachment; filename="${filename}"`,
+                        'Content-Length': buffer.length
+                    });
+                    res.end(buffer);
+                    log(`Generated AI rebuttal letter for paper ${paperId}`);
+                } catch (e) {
+                    log(`Error generating AI rebuttal: ${e.message}`, 'ERROR');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: e.message }));
+                }
+                })();
+            });
+            return;
+        }
+
         // GET /papers/:id/review-files - get review files for a specific paper
         const paperReviewFilesMatch = req.url.match(/^\/papers\/([^/]+)\/review-files$/);
         if (req.method === 'GET' && paperReviewFilesMatch) {

@@ -6864,6 +6864,21 @@ Your response:`;
                         </button>
                     </div>
 
+                    <div class="export-card featured">
+                        <h3><i class="fas fa-robot ai"></i> Generate AI Rebuttal Letter</h3>
+                        <p>Use AI to generate a professional rebuttal letter from your draft responses. Creates a polished document with:</p>
+                        <ul class="export-features">
+                            <li><i class="fas fa-check"></i> Major Changes summary section</li>
+                            <li><i class="fas fa-check"></i> Formatted reviewer comments (italic)</li>
+                            <li><i class="fas fa-check"></i> Polished author responses</li>
+                            <li><i class="fas fa-check"></i> Manuscript quotes with line references</li>
+                        </ul>
+                        <button onclick="generateAIRebuttal()" class="export-card-btn ai" id="ai-rebuttal-btn">
+                            <i class="fas fa-magic"></i> Generate Rebuttal Letter
+                        </button>
+                        <p class="export-note">Requires draft responses for comments</p>
+                    </div>
+
                     <div class="export-card">
                         <h3><i class="fas fa-file-code json"></i> Export JSON Data</h3>
                         <p>Export all review data as JSON for backup or import into another platform.</p>
@@ -8476,6 +8491,85 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-download"></i> Generate Response Document';
+                }
+            }
+        }
+
+        async function generateAIRebuttal() {
+            if (!currentPaperId) {
+                alert('Please select a paper first');
+                return;
+            }
+
+            const allComments = getAllComments();
+            const withResponse = allComments.filter(c => c.draft_response);
+
+            if (withResponse.length === 0) {
+                alert('No draft responses found. Please write responses to some comments first before generating the rebuttal letter.');
+                return;
+            }
+
+            const btn = document.getElementById('ai-rebuttal-btn');
+
+            try {
+                // Show loading state
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating with AI...';
+                }
+
+                // Prepare the data for AI processing
+                const rebuttalData = {
+                    manuscript: reviewData.manuscript,
+                    reviewers: reviewData.reviewers.map(r => ({
+                        name: r.name,
+                        expertise: r.expertise || '',
+                        comments: r.comments.filter(c => c.draft_response).map(c => ({
+                            id: c.id,
+                            type: c.type,
+                            category: c.category,
+                            original_text: c.original_text,
+                            draft_response: c.draft_response,
+                            location: c.location
+                        }))
+                    })).filter(r => r.comments.length > 0)
+                };
+
+                // Call API to generate AI rebuttal
+                const response = await fetch(`${API_BASE}/papers/${currentPaperId}/export/ai-rebuttal`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(rebuttalData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to generate rebuttal');
+                }
+
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rebuttal_letter_${currentPaperId}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                // Restore button
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-magic"></i> Generate Rebuttal Letter';
+                }
+            } catch (error) {
+                console.error('AI Rebuttal error:', error);
+                alert('Error generating rebuttal: ' + error.message);
+
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-magic"></i> Generate Rebuttal Letter';
                 }
             }
         }

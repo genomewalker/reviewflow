@@ -5731,6 +5731,72 @@ a.task-queue-id:hover {
     background: #8a6600;
 }
 
+/* AI Rebuttal Card - Featured */
+.export-card.featured {
+    border: 2px solid var(--scholar);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, var(--paper) 100%);
+    position: relative;
+}
+
+.export-card.featured::before {
+    content: 'AI-POWERED';
+    position: absolute;
+    top: -10px;
+    right: var(--sp-4);
+    background: var(--scholar);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.5px;
+}
+
+.export-card h3 i.ai {
+    color: var(--scholar);
+}
+
+.export-features {
+    list-style: none;
+    padding: 0;
+    margin: var(--sp-3) 0;
+    font-size: var(--text-sm);
+}
+
+.export-features li {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    margin-bottom: var(--sp-1);
+    color: var(--ink-light);
+}
+
+.export-features li i {
+    color: var(--sage);
+    font-size: var(--text-xs);
+}
+
+.export-note {
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    margin-top: var(--sp-2);
+    font-style: italic;
+}
+
+.export-card-btn.ai {
+    background: linear-gradient(135deg, var(--scholar) 0%, #2563eb 100%);
+    color: white;
+}
+
+.export-card-btn.ai:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.export-card-btn.ai:disabled {
+    background: var(--rule);
+    cursor: not-allowed;
+}
+
 /* Export changes list */
 .export-changes-panel {
     margin-top: var(--sp-6);
