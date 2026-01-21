@@ -126,6 +126,115 @@ function restorePaper(paperId) {
     }
 }
 
+// Register a document in the database
+function registerDocument(paperId, docInfo) {
+    if (!db) return null;
+
+    try {
+        // Generate document ID
+        const docId = `${paperId}_${docInfo.category}_${Date.now().toString(36)}`;
+
+        // Normalize filename for storage (remove special chars, lowercase)
+        const normalizedName = docInfo.originalFilename
+            .toLowerCase()
+            .replace(/[^a-z0-9._-]/g, '_')
+            .replace(/_+/g, '_');
+
+        const stmt = db.prepare(`
+            INSERT INTO documents (id, paper_id, category, original_filename, stored_filename,
+                                   converted_filename, file_path, converted_path, file_type,
+                                   file_size, mime_type, is_primary)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        stmt.run(
+            docId,
+            paperId,
+            docInfo.category,
+            docInfo.originalFilename,
+            docInfo.storedFilename || normalizedName,
+            docInfo.convertedFilename || null,
+            docInfo.filePath,
+            docInfo.convertedPath || null,
+            docInfo.fileType || path.extname(docInfo.originalFilename).slice(1),
+            docInfo.fileSize || 0,
+            docInfo.mimeType || null,
+            docInfo.isPrimary ? 1 : 0
+        );
+
+        log(`Registered document ${docId}: ${docInfo.originalFilename} (${docInfo.category})`);
+        return docId;
+    } catch (e) {
+        log(`Error registering document: ${e.message}`, 'ERROR');
+        return null;
+    }
+}
+
+// Get documents for a paper by category
+function getDocuments(paperId, category = null) {
+    if (!db) return [];
+
+    try {
+        let query = 'SELECT * FROM documents WHERE paper_id = ?';
+        const params = [paperId];
+
+        if (category) {
+            query += ' AND category = ?';
+            params.push(category);
+        }
+
+        query += ' ORDER BY created_at DESC';
+        return db.prepare(query).all(...params);
+    } catch (e) {
+        log(`Error getting documents: ${e.message}`, 'ERROR');
+        return [];
+    }
+}
+
+// Get a specific document by ID
+function getDocument(docId) {
+    if (!db) return null;
+
+    try {
+        return db.prepare('SELECT * FROM documents WHERE id = ?').get(docId);
+    } catch (e) {
+        log(`Error getting document: ${e.message}`, 'ERROR');
+        return null;
+    }
+}
+
+// Update document with converted file info
+function updateDocumentConverted(docId, convertedFilename, convertedPath) {
+    if (!db) return false;
+
+    try {
+        db.prepare(`
+            UPDATE documents SET converted_filename = ?, converted_path = ?
+            WHERE id = ?
+        `).run(convertedFilename, convertedPath, docId);
+        return true;
+    } catch (e) {
+        log(`Error updating document: ${e.message}`, 'ERROR');
+        return false;
+    }
+}
+
+// Link reviewer to a document
+function linkReviewerToDocument(reviewerId, documentId) {
+    if (!db) return false;
+
+    try {
+        db.prepare(`
+            UPDATE reviewers SET document_id = ?
+            WHERE id = ?
+        `).run(documentId, reviewerId);
+        return true;
+    } catch (e) {
+        log(`Error linking reviewer to document: ${e.message}`, 'ERROR');
+        return false;
+    }
+}
+
 // Update paper metadata after parsing
 function updatePaperMetadata(paperId, metadata) {
     if (!db) return false;
@@ -1077,6 +1186,35 @@ const MIGRATIONS = {
         description: 'Add original_document column to reviewers table for collaboration export',
         up: `
             ALTER TABLE reviewers ADD COLUMN original_document TEXT;
+        `
+    },
+    16: {
+        description: 'Add documents table to track all uploaded/converted files',
+        up: `
+            CREATE TABLE IF NOT EXISTS documents (
+                id TEXT PRIMARY KEY,
+                paper_id TEXT NOT NULL,
+                category TEXT NOT NULL CHECK(category IN ('manuscript', 'reviews', 'supplementary', 'other')),
+                original_filename TEXT NOT NULL,
+                stored_filename TEXT NOT NULL,
+                converted_filename TEXT,
+                file_path TEXT NOT NULL,
+                converted_path TEXT,
+                file_type TEXT,
+                file_size INTEGER,
+                mime_type TEXT,
+                is_primary BOOLEAN DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (paper_id) REFERENCES papers(id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_documents_paper ON documents(paper_id);
+            CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(paper_id, category);
+        `
+    },
+    17: {
+        description: 'Add document_id to reviewers for linking to source documents',
+        up: `
+            ALTER TABLE reviewers ADD COLUMN document_id TEXT REFERENCES documents(id);
         `
     }
 };
@@ -3931,61 +4069,98 @@ function startApiServer(port = 3001) {
                     const selectedIds = exportData.selectedCommentIds || [];
                     const children = [];
 
-                    // Try to load original documents from paper folder if not provided
+                    // Try to load original documents from database and file system
                     const paperDir = path.join(PROJECT_FOLDER || BASE_DIR, 'papers', paperId);
 
-                    // Collect all review-related .txt and .md files from paper dir and reviews subdir
+                    // First, try to get review documents from database
+                    const reviewDocs = getDocuments(paperId, 'reviews');
+                    log(`Found ${reviewDocs.length} review documents in DB for paper ${paperId}`);
+
+                    // Build a list of available review files (from DB and file system)
                     let allReviewFiles = [];
 
+                    // Add DB-tracked documents
+                    for (const doc of reviewDocs) {
+                        // Prefer converted file if available
+                        const filePath = doc.converted_path || doc.file_path;
+                        if (fs.existsSync(filePath)) {
+                            allReviewFiles.push({
+                                name: path.basename(filePath),
+                                dir: path.dirname(filePath),
+                                fullPath: filePath,
+                                docId: doc.id,
+                                originalName: doc.original_filename
+                            });
+                        } else {
+                            // Try to find converted .md file in paper root
+                            const baseName = path.basename(doc.original_filename, path.extname(doc.original_filename));
+                            const mdPath = path.join(paperDir, `${baseName}.md`);
+                            if (fs.existsSync(mdPath)) {
+                                allReviewFiles.push({
+                                    name: `${baseName}.md`,
+                                    dir: paperDir,
+                                    fullPath: mdPath,
+                                    docId: doc.id,
+                                    originalName: doc.original_filename
+                                });
+                            }
+                        }
+                    }
+
+                    // Also scan file system for review files not in DB
                     // Check paper root directory (where converted .md files are stored)
                     if (fs.existsSync(paperDir)) {
                         const rootFiles = fs.readdirSync(paperDir).filter(f =>
                             (f.endsWith('.txt') || f.endsWith('.md')) &&
                             (f.toLowerCase().includes('review') || f.toLowerCase().includes('referee'))
                         );
-                        rootFiles.forEach(f => allReviewFiles.push({ name: f, dir: paperDir }));
+                        for (const f of rootFiles) {
+                            const fullPath = path.join(paperDir, f);
+                            // Only add if not already tracked
+                            if (!allReviewFiles.some(rf => rf.fullPath === fullPath)) {
+                                allReviewFiles.push({ name: f, dir: paperDir, fullPath });
+                            }
+                        }
                     }
 
-                    // Also check reviews subdirectory
+                    // Check reviews subdirectory
                     const reviewsDir = path.join(paperDir, 'reviews');
                     if (fs.existsSync(reviewsDir)) {
                         const subFiles = fs.readdirSync(reviewsDir).filter(f =>
                             f.endsWith('.txt') || f.endsWith('.md')
                         );
-                        subFiles.forEach(f => allReviewFiles.push({ name: f, dir: reviewsDir }));
+                        for (const f of subFiles) {
+                            const fullPath = path.join(reviewsDir, f);
+                            if (!allReviewFiles.some(rf => rf.fullPath === fullPath)) {
+                                allReviewFiles.push({ name: f, dir: reviewsDir, fullPath });
+                            }
+                        }
                     }
 
                     log(`Found ${allReviewFiles.length} potential review files: ${allReviewFiles.map(f => f.name).join(', ')}`);
 
-                    // If we have review files, try to match them to reviewers
+                    // Match files to reviewers
                     if (allReviewFiles.length > 0) {
                         for (const reviewer of exportData.reviewers || []) {
                             if (!reviewer.original_document) {
                                 let matchedFile = null;
 
-                                // First try source_file match
-                                if (reviewer.source_file) {
+                                // First try document_id match
+                                if (reviewer.document_id) {
+                                    matchedFile = allReviewFiles.find(f => f.docId === reviewer.document_id);
+                                }
+
+                                // Try source_file match
+                                if (!matchedFile && reviewer.source_file) {
                                     const baseName = path.basename(reviewer.source_file, path.extname(reviewer.source_file));
                                     matchedFile = allReviewFiles.find(f =>
-                                        f.name.includes(baseName) || baseName.includes(path.basename(f.name, path.extname(f.name)))
+                                        f.name.includes(baseName) ||
+                                        baseName.includes(path.basename(f.name, path.extname(f.name))) ||
+                                        (f.originalName && f.originalName.includes(baseName))
                                     );
                                 }
 
-                                // Try name-based match (reviewer number)
-                                if (!matchedFile) {
-                                    const reviewerNum = reviewer.name?.match(/\d+/)?.[0];
-                                    if (reviewerNum) {
-                                        matchedFile = allReviewFiles.find(f =>
-                                            f.name.toLowerCase().includes(`reviewer${reviewerNum}`) ||
-                                            f.name.toLowerCase().includes(`reviewer_${reviewerNum}`) ||
-                                            f.name.toLowerCase().includes(`referee${reviewerNum}`) ||
-                                            f.name.toLowerCase().includes(`r${reviewerNum}.`)
-                                        );
-                                    }
-                                }
-
-                                // If still no match and only one review file exists, use it for all reviewers
-                                // (common case: single combined review document)
+                                // If only one review file, use it for all (common case: combined review document)
                                 if (!matchedFile && allReviewFiles.length === 1) {
                                     matchedFile = allReviewFiles[0];
                                     log(`Using single review file for all reviewers: ${matchedFile.name}`);
@@ -3994,8 +4169,7 @@ function startApiServer(port = 3001) {
                                 // Read the matched file
                                 if (matchedFile) {
                                     try {
-                                        const filePath = path.join(matchedFile.dir, matchedFile.name);
-                                        reviewer.original_document = fs.readFileSync(filePath, 'utf-8');
+                                        reviewer.original_document = fs.readFileSync(matchedFile.fullPath, 'utf-8');
                                         log(`Loaded original document for ${reviewer.name} from ${matchedFile.name}`);
                                     } catch (e) {
                                         log(`Could not read ${matchedFile.name}: ${e.message}`, 'WARN');
@@ -7045,9 +7219,20 @@ Provide a clear, consolidated answer:`;
 
                         const filePath = path.join(targetDir, filename);
                         fs.writeFileSync(filePath, content);
-                        files[fileType].push({ name: filename, path: filePath, size: content.length });
 
-                        log(`[VERBOSE] Saved ${fileType}: ${filename} (${content.length} bytes)`);
+                        // Register document in database
+                        const docId = registerDocument(paperId, {
+                            category: fileType,
+                            originalFilename: filename,
+                            storedFilename: filename,
+                            filePath: filePath,
+                            fileSize: content.length,
+                            isPrimary: files[fileType].length === 0 // First file in category is primary
+                        });
+
+                        files[fileType].push({ name: filename, path: filePath, size: content.length, docId });
+
+                        log(`[VERBOSE] Saved ${fileType}: ${filename} (${content.length} bytes) -> doc ${docId}`);
                     }
 
                     const totalFiles = files.manuscript.length + files.reviews.length + files.supplementary.length;
