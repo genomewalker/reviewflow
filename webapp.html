@@ -536,6 +536,37 @@
         </div>
     </div>
 
+    <!-- AI Task Panel (unified panel for AI operations like task optimization) -->
+    <div id="ai-task-panel" class="ai-task-panel hidden">
+        <div class="ai-task-header">
+            <div class="ai-task-title">
+                <i class="fas fa-brain ai-task-icon"></i>
+                <span id="ai-task-title-text">AI Processing</span>
+            </div>
+            <div class="ai-task-controls">
+                <button onclick="stopAITask()" class="ai-task-btn stop" id="ai-task-stop-btn" title="Stop">
+                    <i class="fas fa-stop"></i>
+                </button>
+                <button onclick="minimizeAITaskPanel()" class="ai-task-btn minimize" title="Minimize">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <button onclick="closeAITaskPanel()" class="ai-task-btn close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="ai-task-status" id="ai-task-status">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Initializing...</span>
+        </div>
+        <div class="ai-task-body" id="ai-task-output">
+            <!-- Streaming output goes here -->
+        </div>
+        <div class="ai-task-footer" id="ai-task-footer">
+            <span id="ai-task-elapsed">0s</span>
+        </div>
+    </div>
+
     <!-- Help Modal -->
     <div id="help-modal" class="modal-overlay hidden">
         <div class="modal" style="max-width: 800px; max-height: 90vh;">

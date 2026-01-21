@@ -348,8 +348,19 @@ const API_BASE = 'http://localhost:3001';
 
         /**
          * Toggle the processing panel visibility
+         * Also restores the AI task panel if it's minimized
          */
         function toggleProcessingPanel() {
+            // Check if AI task panel is active (minimized but running)
+            const hasActiveAITask = activeLoadingIndicators.has('ai-task-panel');
+
+            if (hasActiveAITask && aiTaskIsMinimized) {
+                // Restore the AI task panel
+                maximizeAITaskPanel();
+                return;
+            }
+
+            // Otherwise toggle the regular processing panel
             const panel = document.getElementById('processing-panel');
             if (panel) {
                 panel.classList.toggle('hidden');
@@ -4587,6 +4598,71 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
             }, 100);
         }
 
+        // Current sort order for all comments view
+        let currentSort = 'type'; // default: group by type (major/minor)
+        let showCompletedInQueue = false; // Hide completed by default in queue view
+
+        function sortComments(sortBy) {
+            currentSort = sortBy;
+            renderAllComments();
+        }
+
+        function toggleShowCompleted() {
+            showCompletedInQueue = !showCompletedInQueue;
+            renderAllComments();
+        }
+
+        function applySortOrder(comments, sortBy) {
+            const sorted = [...comments];
+            switch (sortBy) {
+                case 'queue':
+                    // Sort by AI-optimized queue order (sort_order field)
+                    // Comments without sort_order go to the end
+                    sorted.sort((a, b) => {
+                        const orderA = a.sort_order || 9999;
+                        const orderB = b.sort_order || 9999;
+                        return orderA - orderB;
+                    });
+                    break;
+                case 'priority':
+                    sorted.sort((a, b) => {
+                        const priorityOrder = { high: 0, medium: 1, low: 2 };
+                        return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+                    });
+                    break;
+                case 'status':
+                    sorted.sort((a, b) => {
+                        const statusOrder = { pending: 0, in_progress: 1, completed: 2 };
+                        return (statusOrder[a.status] || 0) - (statusOrder[b.status] || 0);
+                    });
+                    break;
+                case 'reviewer':
+                    sorted.sort((a, b) => (a.reviewer || '').localeCompare(b.reviewer || ''));
+                    break;
+                case 'id':
+                    sorted.sort((a, b) => {
+                        // Natural sort for IDs like R1-1, R1-2, R2-1
+                        const parseId = (id) => {
+                            const match = id.match(/R(\d+)-(\d+)/);
+                            return match ? [parseInt(match[1]), parseInt(match[2])] : [999, 999];
+                        };
+                        const [r1, c1] = parseId(a.id);
+                        const [r2, c2] = parseId(b.id);
+                        return r1 !== r2 ? r1 - r2 : c1 - c2;
+                    });
+                    break;
+                case 'type':
+                default:
+                    // Default: major first, then minor
+                    sorted.sort((a, b) => {
+                        if (a.type === 'major' && b.type !== 'major') return -1;
+                        if (a.type !== 'major' && b.type === 'major') return 1;
+                        return 0;
+                    });
+            }
+            return sorted;
+        }
+
         // Render All Comments - Shows both major and minor with clear sections
         function renderAllComments() {
             let allComments = getAllComments();
@@ -4630,7 +4706,13 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                 }
             }
 
-            // Separate major and minor
+            // Apply sorting
+            comments = applySortOrder(comments, currentSort);
+
+            // Check if we have queue order data
+            const hasQueueOrder = comments.some(c => c.sort_order && c.sort_order > 0);
+
+            // Separate major and minor (for type sorting)
             const majorComments = comments.filter(c => c.type === 'major');
             const minorComments = comments.filter(c => c.type === 'minor');
 
@@ -4713,11 +4795,12 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                 <div class="comments-controls">
                     <div class="comments-controls-left">
                         <select onchange="sortComments(this.value)" class="comments-sort-select">
-                            <option value="id">Sort by ID</option>
-                            <option value="priority">Sort by Priority</option>
-                            <option value="status">Sort by Status</option>
-                            <option value="reviewer">Sort by Reviewer</option>
-                            <option value="type">Sort by Type</option>
+                            <option value="type" ${currentSort === 'type' ? 'selected' : ''}>Sort by Type (Major/Minor)</option>
+                            <option value="queue" ${currentSort === 'queue' ? 'selected' : ''}>Sort by Queue Order</option>
+                            <option value="id" ${currentSort === 'id' ? 'selected' : ''}>Sort by ID</option>
+                            <option value="priority" ${currentSort === 'priority' ? 'selected' : ''}>Sort by Priority</option>
+                            <option value="status" ${currentSort === 'status' ? 'selected' : ''}>Sort by Status</option>
+                            <option value="reviewer" ${currentSort === 'reviewer' ? 'selected' : ''}>Sort by Reviewer</option>
                         </select>
                         ${currentFilter ? `
                             <span class="comments-filter-badge">
@@ -4738,37 +4821,89 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                 <!-- Selection Toolbar for Collaboration -->
                 ${renderCollabSelectionToolbar()}
 
-                <!-- Comments grouped by type if showing all -->
-                ${!currentFilter || currentFilter.type !== 'type' ? `
+                <!-- Comments display depends on sort order -->
+                ${currentSort === 'type' && (!currentFilter || currentFilter.type !== 'type') ? (() => {
+                    const pendingMajor = majorComments.filter(c => c.status !== 'completed');
+                    const pendingMinor = minorComments.filter(c => c.status !== 'completed');
+                    const completedAll = comments.filter(c => c.status === 'completed');
+                    return `
                     <!-- Major Comments Section -->
-                    ${majorComments.length > 0 ? `
+                    ${pendingMajor.length > 0 ? `
                         <div class="comments-section">
                             <h3 class="comments-section-header major">
                                 <span class="section-dot"></span>
-                                Major Comments (${majorComments.length})
+                                Major Comments (${pendingMajor.length})
                                 <span class="comments-section-subtitle">- Require substantive response</span>
                             </h3>
                             <div class="comments-list">
-                                ${majorComments.map(c => renderCommentCard(c)).join('')}
+                                ${pendingMajor.map(c => renderCommentCard(c)).join('')}
                             </div>
                         </div>
                     ` : ''}
 
                     <!-- Minor Comments Section -->
-                    ${minorComments.length > 0 ? `
+                    ${pendingMinor.length > 0 ? `
                         <div class="comments-section">
                             <h3 class="comments-section-header minor">
                                 <span class="section-dot"></span>
-                                Minor Comments (${minorComments.length})
+                                Minor Comments (${pendingMinor.length})
                                 <span class="comments-section-subtitle">- Quick fixes and clarifications</span>
                             </h3>
                             <div class="comments-list">
-                                ${minorComments.map(c => renderCommentCard(c)).join('')}
+                                ${pendingMinor.map(c => renderCommentCard(c)).join('')}
                             </div>
                         </div>
                     ` : ''}
-                ` : `
-                    <!-- Filtered view - single list -->
+
+                    ${completedAll.length > 0 ? `
+                    <!-- Completed Section -->
+                    <details class="completed-section">
+                        <summary class="completed-section-header">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Completed (${completedAll.length})</span>
+                            <i class="fas fa-chevron-down chevron"></i>
+                        </summary>
+                        <div class="comments-list completed-list">
+                            ${completedAll.map(c => renderCommentCard(c)).join('')}
+                        </div>
+                    </details>
+                    ` : ''}
+                `;
+                })() : currentSort === 'queue' ? (() => {
+                    const pendingComments = comments.filter(c => c.status !== 'completed');
+                    const completedComments = comments.filter(c => c.status === 'completed');
+                    return `
+                    <!-- Queue Order view -->
+                    <div class="comments-section">
+                        <h3 class="comments-section-header queue">
+                            <span class="section-dot" style="background: var(--scholar);"></span>
+                            Task Queue
+                            <span class="comments-section-subtitle">
+                                ${pendingComments.length} remaining${completedComments.length > 0 ? ` · <span class="completed-count">${completedComments.length} completed</span>` : ''}
+                                ${hasQueueOrder ? '' : ' · Run AI Optimize to set order'}
+                            </span>
+                        </h3>
+                        <div class="comments-list queue-order">
+                            ${pendingComments.map(c => renderCommentCard(c)).join('') || '<p class="empty-queue">All tasks completed! 🎉</p>'}
+                        </div>
+                    </div>
+
+                    ${completedComments.length > 0 ? `
+                    <!-- Completed Section (collapsed) -->
+                    <details class="completed-section">
+                        <summary class="completed-section-header">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Completed (${completedComments.length})</span>
+                            <i class="fas fa-chevron-down chevron"></i>
+                        </summary>
+                        <div class="comments-list completed-list">
+                            ${completedComments.map(c => renderCommentCard(c)).join('')}
+                        </div>
+                    </details>
+                    ` : ''}
+                `;
+                })() : `
+                    <!-- Sorted/Filtered view - single list -->
                     <div class="comments-list">
                         ${comments.map(c => renderCommentCard(c)).join('')}
                     </div>
@@ -4797,7 +4932,8 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
             'gray': { cssClass: 'expert-gray' }
         };
 
-        function renderCommentCard(comment) {
+        function renderCommentCard(comment, options = {}) {
+            const { queuePosition } = options;
             const priorityClass = `priority-${comment.priority}`;
 
             // Get validated expert data (null if stale/mismatched)
@@ -4891,11 +5027,13 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
             }
 
             const isSelected = collabSelectedComments.has(comment.id);
+            const queueBadge = queuePosition ? `<span class="queue-position-badge" title="Queue position #${queuePosition}">#${queuePosition}</span>` : '';
             return `
                 <div class="comment-card ${priorityClass} ${isSelected ? 'collab-selected' : ''}" data-comment-id="${comment.id}">
                     <!-- Compact Header -->
                     <div class="comment-card-header">
                         <div class="comment-badges">
+                            ${queueBadge}
                             <label class="collab-checkbox-wrapper" title="Select for collaboration export" onclick="event.stopPropagation()">
                                 <input type="checkbox" class="collab-card-checkbox"
                                        ${isSelected ? 'checked' : ''}
@@ -6985,85 +7123,173 @@ Return the complete ordered list as JSON:`;
         }
 
         // Terminal modal for AI optimization logging
-        function showTerminalModal(title = 'AI Task Optimization') {
-            // Remove existing modal if any
-            document.getElementById('terminal-modal')?.remove();
+        // ===== AI TASK PANEL SYSTEM =====
+        // Unified panel for AI operations with minimize/stop support
 
-            const modal = document.createElement('div');
-            modal.id = 'terminal-modal';
-            modal.className = 'modal-overlay';
-            modal.innerHTML = `
-                <div class="terminal-modal">
-                    <div class="terminal-header">
-                        <div class="terminal-dots">
-                            <span class="terminal-dot red"></span>
-                            <span class="terminal-dot yellow"></span>
-                            <span class="terminal-dot green"></span>
-                        </div>
-                        <span class="terminal-title">${title}</span>
-                        <button onclick="closeTerminalModal()" class="terminal-close" title="Close">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="terminal-body" id="terminal-output">
-                        <div class="terminal-line">
-                            <span class="terminal-prompt">$</span>
-                            <span class="terminal-command">opencode optimize-tasks --model ${aiSettings?.model || 'gpt-4o-mini'}</span>
-                        </div>
-                    </div>
-                    <div class="terminal-footer">
-                        <div class="terminal-status" id="terminal-status">
-                            <i class="fas fa-circle-notch fa-spin"></i>
-                            <span>Initializing...</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            return modal;
+        let aiTaskStartTime = null;
+        let aiTaskElapsedTimer = null;
+        let aiTaskAbortController = null;
+        let aiTaskIsMinimized = false;
+
+        function showAITaskPanel(title = 'AI Processing', icon = 'fa-brain') {
+            const panel = document.getElementById('ai-task-panel');
+            if (!panel) return;
+
+            // Reset state
+            aiTaskStartTime = Date.now();
+            aiTaskIsMinimized = false;
+            aiTaskAbortController = new AbortController();
+
+            // Update title and icon
+            document.getElementById('ai-task-title-text').textContent = title;
+            panel.querySelector('.ai-task-icon').innerHTML = `<i class="fas ${icon}"></i>`;
+
+            // Clear previous output
+            document.getElementById('ai-task-output').innerHTML = '';
+
+            // Reset status
+            updateAITaskStatus('Initializing...', 'fa-circle-notch fa-spin');
+
+            // Enable stop button
+            const stopBtn = document.getElementById('ai-task-stop-btn');
+            if (stopBtn) stopBtn.disabled = false;
+
+            // Show panel
+            panel.classList.remove('hidden', 'minimized');
+
+            // Start elapsed timer
+            updateAITaskElapsed();
+            aiTaskElapsedTimer = setInterval(updateAITaskElapsed, 1000);
+
+            // Register with processing indicators
+            showOpenCodeLoading('ai-task-panel', title);
+
+            return aiTaskAbortController.signal;
         }
 
-        function closeTerminalModal() {
-            const modal = document.getElementById('terminal-modal');
-            if (modal) {
-                modal.classList.add('closing');
-                setTimeout(() => modal.remove(), 200);
+        function updateAITaskElapsed() {
+            if (!aiTaskStartTime) return;
+            const elapsed = Math.round((Date.now() - aiTaskStartTime) / 1000);
+            const elapsedEl = document.getElementById('ai-task-elapsed');
+            if (elapsedEl) {
+                elapsedEl.textContent = `${elapsed}s`;
             }
         }
 
-        function terminalLog(message, type = 'info') {
-            const output = document.getElementById('terminal-output');
+        function closeAITaskPanel(forceClose = false) {
+            const panel = document.getElementById('ai-task-panel');
+
+            // If task is still running, minimize instead of close (unless forced)
+            const isTaskRunning = aiTaskAbortController && !aiTaskAbortController.signal.aborted;
+            if (isTaskRunning && !forceClose) {
+                minimizeAITaskPanel();
+                return;
+            }
+
+            if (panel) {
+                panel.classList.add('hidden');
+            }
+
+            // Stop timer
+            if (aiTaskElapsedTimer) {
+                clearInterval(aiTaskElapsedTimer);
+                aiTaskElapsedTimer = null;
+            }
+
+            // Abort any pending request
+            if (aiTaskAbortController) {
+                aiTaskAbortController.abort();
+                aiTaskAbortController = null;
+            }
+
+            // Remove from processing indicators
+            hideOpenCodeLoading('ai-task-panel');
+        }
+
+        function minimizeAITaskPanel() {
+            const panel = document.getElementById('ai-task-panel');
+            if (panel) {
+                aiTaskIsMinimized = true;
+                panel.classList.add('hidden');
+
+                // The floating icon is already visible via activeLoadingIndicators
+                // Just ensure the processing button is updated
+                updateProcessingButton();
+            }
+        }
+
+        function maximizeAITaskPanel() {
+            const panel = document.getElementById('ai-task-panel');
+            if (panel) {
+                aiTaskIsMinimized = false;
+                panel.classList.remove('hidden');
+            }
+        }
+
+        function stopAITask() {
+            if (aiTaskAbortController) {
+                aiTaskAbortController.abort();
+                aiTaskLog('Operation cancelled by user', 'error');
+                updateAITaskStatus('Cancelled', 'fa-ban', 'error');
+
+                // Disable stop button
+                const stopBtn = document.getElementById('ai-task-stop-btn');
+                if (stopBtn) stopBtn.disabled = true;
+            }
+        }
+
+        function aiTaskLog(message, type = 'info') {
+            const output = document.getElementById('ai-task-output');
             if (!output) return;
 
             const line = document.createElement('div');
-            line.className = `terminal-line ${type}`;
+            line.className = `ai-task-line ${type}`;
 
             // Format based on type
-            if (type === 'command') {
-                line.innerHTML = `<span class="terminal-prompt">$</span><span class="terminal-command">${message}</span>`;
-            } else if (type === 'success') {
-                line.innerHTML = `<span class="terminal-success">✓</span> ${message}`;
-            } else if (type === 'error') {
-                line.innerHTML = `<span class="terminal-error">✗</span> ${message}`;
-            } else if (type === 'reasoning') {
-                line.innerHTML = `<span class="terminal-reasoning">💭</span> <span class="reasoning-text">${message}</span>`;
-            } else if (type === 'task') {
-                line.innerHTML = `<span class="terminal-task">→</span> ${message}`;
-            } else if (type === 'header') {
-                line.innerHTML = `<span class="terminal-header-text">=== ${message} ===</span>`;
+            const icons = {
+                'success': '✓',
+                'error': '✗',
+                'reasoning': '💭',
+                'task': '→',
+                'header': '═',
+                'info': 'ℹ'
+            };
+
+            const icon = icons[type] || icons['info'];
+
+            if (type === 'header') {
+                line.innerHTML = `<span class="icon">${icon}</span><strong>${message}</strong>`;
             } else {
-                line.innerHTML = `<span class="terminal-info">ℹ</span> ${message}`;
+                line.innerHTML = `<span class="icon">${icon}</span><span>${message}</span>`;
             }
 
             output.appendChild(line);
             output.scrollTop = output.scrollHeight;
         }
 
-        function updateTerminalStatus(message, icon = 'fa-circle-notch fa-spin') {
-            const status = document.getElementById('terminal-status');
+        function updateAITaskStatus(message, icon = 'fa-circle-notch fa-spin', className = '') {
+            const status = document.getElementById('ai-task-status');
             if (status) {
-                status.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+                status.className = `ai-task-status ${className}`;
+                status.innerHTML = `<i class="fas ${icon}${icon.includes('fa-spin') ? '' : ''}"></i><span>${message}</span>`;
             }
+        }
+
+        // Legacy aliases for backward compatibility
+        function showTerminalModal(title) {
+            return showAITaskPanel(title, 'fa-sort-amount-up');
+        }
+
+        function closeTerminalModal() {
+            closeAITaskPanel();
+        }
+
+        function terminalLog(message, type = 'info') {
+            aiTaskLog(message, type);
+        }
+
+        function updateTerminalStatus(message, icon = 'fa-circle-notch fa-spin') {
+            updateAITaskStatus(message, icon);
         }
 
         async function optimizeTasksWithAI() {
@@ -7110,6 +7336,19 @@ Return the complete ordered list as JSON:`;
                 terminalLog(`Categories: ${categories.join(', ')}`, 'task');
 
                 terminalLog('Sending to OpenCode', 'header');
+                updateTerminalStatus('Resetting AI session...', 'fa-sync');
+
+                // Reset the OpenCode session to get a fresh context (no prior conversation)
+                try {
+                    const resetResponse = await fetch(`${API_BASE}/session/reset`, { method: 'POST' });
+                    if (resetResponse.ok) {
+                        terminalLog('Session reset for fresh context', 'info');
+                    }
+                } catch (resetErr) {
+                    console.warn('Could not reset session:', resetErr);
+                    // Continue anyway - the prompt should be explicit enough
+                }
+
                 updateTerminalStatus('Waiting for AI response...', 'fa-brain');
 
                 // Build task summaries
@@ -7123,31 +7362,37 @@ Return the complete ordered list as JSON:`;
                     text_preview: (c.original_text || '').substring(0, 100)
                 }));
 
-                const prompt = `You are a productivity expert helping a researcher respond to peer review comments.
+                const prompt = `# TASK: SORT TASK IDs BY PRIORITY
 
-ORDER these ${taskSummaries.length} tasks for OPTIMAL PRODUCTIVITY using research-backed strategies:
+You are a productivity expert. Sort the following ${taskSummaries.length} task IDs into an optimal work order.
 
-## PRODUCTIVITY PRINCIPLES TO APPLY:
-1. **Quick Wins First (2-3 tasks)**: Start with minor/easy tasks to build momentum and confidence
-2. **Peak Energy Tasks Next**: Major/high-priority items when motivation is established
-3. **Batch Similar Work**: Group related categories together (e.g., all Figure tasks, all Methods tasks)
-4. **Analysis Tasks Together**: Items requiring new analysis should be batched
-5. **End with Low Stakes**: Save low-priority minor items for the end when energy wanes
+DO NOT write responses to the tasks. DO NOT solve them. ONLY output a sorted list.
 
-## TASKS TO ORDER:
-${JSON.stringify(taskSummaries, null, 2)}
+## SORTING RULES:
+1. Start with 2-3 quick wins (minor/low priority) for momentum
+2. Then major/high priority items while energy is high
+3. Group similar categories together
+4. End with remaining minor items
 
-## OUTPUT FORMAT:
-First, briefly explain your reasoning (2-3 sentences about your strategy).
-Then return a JSON array of task IDs in the recommended order, with a brief reason for each position.
-Format: [{"id": "R1-5", "reason": "Quick formatting fix - build momentum"}, ...]
+## TASK LIST:
+${taskSummaries.map(t => `${t.id}: ${t.type}/${t.priority} [${t.category}]`).join('\n')}
 
-Your response:`;
+## OUTPUT FORMAT (required):
+Write 2 sentences about your strategy, then output JSON:
+
+\`\`\`json
+[
+  {"id": "R1.5", "reason": "Quick win"},
+  {"id": "R2.3", "reason": "High priority methodology"}
+]
+\`\`\`
+
+IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Start now:`;
 
                 terminalLog(`Model: ${aiSettings?.model || 'gpt-4o-mini'}`, 'info');
                 terminalLog('Prompt sent, awaiting response...', 'info');
 
-                showOpenCodeLoading('terminal-optimize', 'Optimizing task queue with AI...');
+                // Note: showAITaskPanel already registered with processing indicators
                 const response = await fetch(`${API_BASE}/ask`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -7159,10 +7404,8 @@ Your response:`;
                 });
 
                 if (!response.ok) {
-                    hideOpenCodeLoading('terminal-optimize', { success: false, message: 'API error' });
                     throw new Error(`API error: ${response.status}`);
                 }
-                hideOpenCodeLoading('terminal-optimize', { success: true, message: 'Response received' });
 
                 const result = await response.json();
                 const aiResponse = result.response || '';
@@ -7170,10 +7413,53 @@ Your response:`;
                 terminalLog('AI Response received', 'header');
                 updateTerminalStatus('Processing response...', 'fa-cogs');
 
-                // Extract reasoning (text before JSON)
-                const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    const reasoningText = aiResponse.substring(0, jsonMatch.index).trim();
+                // Extract JSON array from response - find balanced brackets
+                function extractJsonArray(text) {
+                    // Find the first [ that starts an array of objects
+                    const startIdx = text.indexOf('[');
+                    if (startIdx === -1) return null;
+
+                    let depth = 0;
+                    let inString = false;
+                    let escapeNext = false;
+
+                    for (let i = startIdx; i < text.length; i++) {
+                        const char = text[i];
+
+                        if (escapeNext) {
+                            escapeNext = false;
+                            continue;
+                        }
+
+                        if (char === '\\' && inString) {
+                            escapeNext = true;
+                            continue;
+                        }
+
+                        if (char === '"') {
+                            inString = !inString;
+                            continue;
+                        }
+
+                        if (!inString) {
+                            if (char === '[') depth++;
+                            else if (char === ']') {
+                                depth--;
+                                if (depth === 0) {
+                                    return {
+                                        json: text.substring(startIdx, i + 1),
+                                        index: startIdx
+                                    };
+                                }
+                            }
+                        }
+                    }
+                    return null;
+                }
+
+                const jsonResult = extractJsonArray(aiResponse);
+                if (jsonResult) {
+                    const reasoningText = aiResponse.substring(0, jsonResult.index).trim();
                     if (reasoningText) {
                         // Split reasoning into sentences and log each
                         const sentences = reasoningText.split(/(?<=[.!?])\s+/).filter(s => s.trim());
@@ -7184,7 +7470,7 @@ Your response:`;
                         });
                     }
 
-                    const orderedTasks = JSON.parse(jsonMatch[0]);
+                    const orderedTasks = JSON.parse(jsonResult.json);
                     taskOrderCache = orderedTasks;
 
                     terminalLog('Optimized task order', 'header');
@@ -7200,31 +7486,81 @@ Your response:`;
 
                     // Apply the order
                     terminalLog('Applying new order', 'header');
-                    const optimizedComments = applyAIOrder(pendingComments, orderedTasks);
 
-                    optimizedComments.forEach((c, idx) => {
-                        const originalComment = findCommentById(c.id);
-                        if (originalComment) {
-                            originalComment.sort_order = idx + 1;
+                    // Helper to normalize comment IDs (handle paper prefix and dot/dash variants)
+                    const normalizeId = (id) => {
+                        // Extract base ID like R1.5 or R1-5 from prefix_R1.5 or just R1-5
+                        // Handle both dot (R1.5) and dash (R1-5) formats
+                        const match = id.match(/(R\d+[.\-]\d+)$/i);
+                        if (match) {
+                            // Normalize to dot format for consistent matching
+                            return match[1].toUpperCase().replace('-', '.');
+                        }
+                        return id.toUpperCase();
+                    };
+
+                    // Build a map from normalized ID to actual comment
+                    const idMap = new Map();
+                    for (const comment of pendingComments) {
+                        const normId = normalizeId(comment.id);
+                        idMap.set(normId, comment);
+                    }
+
+                    // Apply order using normalized ID matching
+                    orderedTasks.forEach((item, idx) => {
+                        const taskId = typeof item === 'string' ? item : item.id;
+                        const normTaskId = normalizeId(taskId);
+                        const comment = idMap.get(normTaskId);
+                        if (comment) {
+                            // Update the actual comment in reviewData
+                            const originalComment = findCommentById(comment.id);
+                            if (originalComment) {
+                                originalComment.sort_order = idx + 1;
+                                terminalLog(`Set #${idx + 1} for ${comment.id}`, 'info');
+                            }
                         }
                     });
 
                     terminalLog('Task order updated successfully!', 'success');
+
+                    // Save immediately to database
+                    terminalLog('Saving to database...', 'info');
+                    const saved = await saveCommentsToDb();
+                    if (saved) {
+                        terminalLog('Queue order saved to database', 'success');
+                    } else {
+                        terminalLog('Saved to localStorage (database unavailable)', 'info');
+                    }
+
                     terminalLog('', 'info');
                     terminalLog('Click X to close this window and view your optimized task queue.', 'info');
                     updateTerminalStatus('Optimization complete! Review the results above.', 'fa-check-circle');
 
+                    // Mark task as done so close button works normally
+                    aiTaskAbortController = null;
+
                     await renderTaskQueue();
-                    scheduleAutoSave();
 
                 } else {
-                    throw new Error('Could not parse AI response');
+                    // Log the actual response for debugging
+                    console.error('AI response (no JSON found):', aiResponse);
+                    terminalLog('No JSON array found in AI response', 'error');
+                    terminalLog('AI returned:', 'header');
+                    // Show first 400 chars of response to help debug
+                    const preview = aiResponse.substring(0, 400);
+                    terminalLog(preview + (aiResponse.length > 400 ? '...' : ''), 'info');
+                    terminalLog('', 'info');
+                    terminalLog('The AI may have misunderstood the task. Try again or use a different model.', 'error');
+                    throw new Error('Could not parse AI response - expected JSON array');
                 }
 
             } catch (e) {
                 console.error('AI optimization failed:', e);
                 terminalLog(`Error: ${e.message}`, 'error');
                 updateTerminalStatus('Optimization failed', 'fa-exclamation-circle');
+
+                // Mark task as done so close button works normally
+                aiTaskAbortController = null;
 
                 // Don't auto-close on error so user can see what happened
                 setTimeout(async () => {
@@ -7835,7 +8171,7 @@ Your response:`;
                                     <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
                                         <i class="fas fa-pen text-indigo-600"></i>
                                     </div>
-                                    Your Response
+                                    Response
                                 </label>
                                 <div class="flex items-center gap-2">
                                     <button onclick="showVersionHistory('${comment.id}')" class="text-xs px-2 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600" title="View version history">

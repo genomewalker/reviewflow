@@ -3951,7 +3951,9 @@ function startApiServer(port = 3001) {
                             draft_response: c.draft_response || '',
                             location: c.location || null,
                             full_context: c.full_context || null,
-                            tags: c.tags ? (c.tags.startsWith('[') ? JSON.parse(c.tags) : c.tags.split(',').map(t => t.trim())) : []
+                            tags: c.tags ? (c.tags.startsWith('[') ? JSON.parse(c.tags) : c.tags.split(',').map(t => t.trim())) : [],
+                            sort_order: c.sort_order || 0,
+                            requires_new_analysis: c.requires_new_analysis === 1
                         }))
                 }));
 
@@ -4446,6 +4448,18 @@ function startApiServer(port = 3001) {
                     markdownContent += '# Comments for Co-Author Review\n\n';
                     markdownContent += `*${selectedIds.length} comment${selectedIds.length !== 1 ? 's' : ''} selected - please provide your response below each comment*\n\n`;
 
+                    // Build a map of comment text snippets to their IDs for linking
+                    const commentTextToId = new Map();
+                    for (const reviewer of exportData.reviewers || []) {
+                        for (const comment of reviewer.comments || []) {
+                            if (comment.isSelected && comment.original_text) {
+                                // Use first 50 chars as key for matching
+                                const key = comment.original_text.trim().substring(0, 50);
+                                commentTextToId.set(key, comment.id.replace(/\./g, '-'));
+                            }
+                        }
+                    }
+
                     // Process each reviewer's selected comments
                     for (const reviewer of exportData.reviewers || []) {
                         const selectedComments = (reviewer.comments || []).filter(c => c.isSelected);
@@ -4455,15 +4469,19 @@ function startApiServer(port = 3001) {
 
                         // Process each selected comment
                         for (const comment of selectedComments) {
+                            const anchorId = comment.id.replace(/\./g, '-');
                             const typeLabel = comment.type === 'major' ? ' **[MAJOR]**' : ' *[minor]*';
-                            markdownContent += `### Comment ${comment.id}${typeLabel}\n\n`;
+                            markdownContent += `### Comment ${comment.id}${typeLabel} {#comment-${anchorId}}\n\n`;
 
                             // Reviewer comment as blockquote
                             const commentText = (comment.original_text || '').trim();
                             markdownContent += commentText.split('\n').map(line => `> ${line}`).join('\n') + '\n\n';
 
+                            // Link to context in original document
+                            markdownContent += `[*→ See in original document*](#context-${anchorId})\n\n`;
+
                             // Response section
-                            markdownContent += '**Your Response:**\n\n';
+                            markdownContent += '**Response:**\n\n';
                             markdownContent += '\\  \n\\  \n\\  \n\\  \n\\  \n\\  \n\n';
                             markdownContent += '---\n\n';
                         }
@@ -4474,44 +4492,65 @@ function startApiServer(port = 3001) {
 
                     // ========== PART 2: ORIGINAL REVIEWER DOCUMENT ==========
                     markdownContent += '# Original Reviewer Document\n\n';
-                    markdownContent += '*Selected comments are highlighted in yellow.*\n\n';
+                    markdownContent += '*Selected comments are highlighted. Click comment ID to jump back.*\n\n';
 
-                    // Get selected comment texts for highlighting
-                    const selectedTexts = [];
+                    // Build list of selected comments with their text snippets for matching
+                    const selectedCommentsList = [];
                     for (const reviewer of exportData.reviewers || []) {
                         for (const comment of reviewer.comments || []) {
                             if (comment.isSelected && comment.original_text) {
-                                selectedTexts.push(comment.original_text.trim().substring(0, 100));
+                                selectedCommentsList.push({
+                                    id: comment.id,
+                                    anchorId: comment.id.replace(/\./g, '-'),
+                                    textSnippet: comment.original_text.trim().substring(0, 50),
+                                    fullText: comment.original_text.trim()
+                                });
                             }
                         }
                     }
 
-                    // Process each reviewer's original document
+                    // Get unique original documents (avoid duplicates when all reviewers share the same doc)
+                    const seenDocHashes = new Set();
+                    const uniqueReviewerDocs = [];
                     for (const reviewer of exportData.reviewers || []) {
-                        markdownContent += `## ${reviewer.name}\n\n`;
+                        const docText = (reviewer.original_document || '').trim();
+                        const docHash = docText.substring(0, 200); // Use first 200 chars as hash
+                        if (docText && !seenDocHashes.has(docHash)) {
+                            seenDocHashes.add(docHash);
+                            uniqueReviewerDocs.push({ reviewer, docText });
+                        } else if (!docText) {
+                            // Reviewer without document - show their comments
+                            uniqueReviewerDocs.push({ reviewer, docText: '' });
+                        }
+                    }
 
-                        let docText = reviewer.original_document || '';
+                    // Process unique documents only
+                    for (const { reviewer, docText } of uniqueReviewerDocs) {
+                        if (uniqueReviewerDocs.length > 1 || !docText) {
+                            markdownContent += `## ${reviewer.name}\n\n`;
+                        }
 
-                        if (docText.trim()) {
+                        if (docText) {
                             // First, strip existing Pandoc {.mark} spans from the original document
                             // These come from Word-to-markdown conversion and we only want to highlight selected comments
-                            docText = docText.replace(/\[([^\]]*)\]\{\.mark\}/g, '$1');
+                            let cleanDocText = docText.replace(/\[([^\]]*)\]\{\.mark\}/g, '$1');
 
                             // Add the original document content with highlighting for selected comments
-                            const sections = docText.split(/\n\n+/);
+                            const sections = cleanDocText.split(/\n\n+/);
 
                             for (const section of sections) {
                                 if (!section.trim()) continue;
 
-                                // Check if this section contains any selected comment
+                                // Check if this section matches any selected comment
                                 const sectionText = section.trim();
-                                const isHighlighted = selectedTexts.some(selText =>
-                                    sectionText.includes(selText.substring(0, 50)) ||
-                                    selText.includes(sectionText.substring(0, 100).substring(0, 50))
+                                const matchedComment = selectedCommentsList.find(sc =>
+                                    sectionText.includes(sc.textSnippet) ||
+                                    sc.fullText.includes(sectionText.substring(0, 50))
                                 );
 
-                                if (isHighlighted) {
-                                    // Wrap in custom-style span for highlighting
+                                if (matchedComment) {
+                                    // Add anchor and back-link, then highlighted text
+                                    markdownContent += `[**← ${matchedComment.id}**](#comment-${matchedComment.anchorId}) {#context-${matchedComment.anchorId}}\n\n`;
                                     markdownContent += `[${section}]{.mark}\n\n`;
                                 } else {
                                     markdownContent += section + '\n\n';
@@ -4523,6 +4562,8 @@ function startApiServer(port = 3001) {
                             for (const comment of reviewer.comments || []) {
                                 const commentText = comment.original_text || '';
                                 if (comment.isSelected) {
+                                    const anchorId = comment.id.replace(/\./g, '-');
+                                    markdownContent += `[**← ${comment.id}**](#comment-${anchorId}) {#context-${anchorId}}\n\n`;
                                     markdownContent += `[${commentText}]{.mark}\n\n`;
                                 } else {
                                     markdownContent += commentText + '\n\n';

@@ -574,6 +574,90 @@ a.comment-id:hover,
     flex-wrap: wrap;
 }
 
+/* Queue position badge */
+.queue-position-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 24px;
+    padding: 0 var(--sp-2);
+    background: linear-gradient(135deg, var(--scholar), #6366f1);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Queue order list styling */
+.comments-list.queue-order .comment-card {
+    border-left: 3px solid var(--scholar);
+}
+
+.comments-section-header.queue {
+    color: var(--scholar);
+}
+
+/* Completed section */
+.completed-section {
+    margin-top: var(--sp-6);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--wash);
+}
+
+.completed-section-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--ink-muted);
+    user-select: none;
+}
+
+.completed-section-header:hover {
+    background: var(--paper);
+}
+
+.completed-section-header i:first-child {
+    color: var(--sage);
+}
+
+.completed-section-header .chevron {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+    font-size: 12px;
+}
+
+.completed-section[open] .completed-section-header .chevron {
+    transform: rotate(180deg);
+}
+
+.completed-section .completed-list {
+    padding: var(--sp-4);
+    padding-top: 0;
+}
+
+.completed-section .comment-card {
+    opacity: 0.7;
+}
+
+.completed-count {
+    color: var(--sage);
+    font-weight: 600;
+}
+
+.empty-queue {
+    text-align: center;
+    padding: var(--sp-8);
+    color: var(--ink-muted);
+    font-size: var(--text-lg);
+}
+
 .comment-actions-inline {
     display: flex;
     align-items: center;
@@ -2554,6 +2638,201 @@ a.comment-id:hover,
     display: flex;
     justify-content: space-between;
     gap: var(--sp-2);
+}
+
+/* =====================================================
+   AI TASK PANEL
+   ===================================================== */
+
+.ai-task-panel {
+    position: fixed;
+    bottom: 70px;
+    right: var(--sp-4);
+    width: 420px;
+    max-height: 500px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow-dramatic);
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 902;
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-task-panel.hidden {
+    display: none;
+}
+
+.ai-task-panel.minimized {
+    height: auto;
+    max-height: none;
+}
+
+.ai-task-panel.minimized .ai-task-body,
+.ai-task-panel.minimized .ai-task-footer {
+    display: none;
+}
+
+.ai-task-header {
+    padding: var(--sp-3) var(--sp-4);
+    background: linear-gradient(135deg, var(--ink), #374151);
+    color: var(--paper);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ai-task-title {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-weight: 600;
+    font-size: var(--text-sm);
+}
+
+.ai-task-icon {
+    width: 24px;
+    height: 24px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.ai-task-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+.ai-task-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(255,255,255,0.1);
+    color: var(--paper);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.ai-task-btn:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.ai-task-btn.stop {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+.ai-task-btn.stop:hover {
+    background: rgba(239, 68, 68, 0.5);
+}
+
+.ai-task-btn.stop:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.ai-task-status {
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--wash);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--text-sm);
+    color: var(--ink-muted);
+}
+
+.ai-task-status i {
+    color: var(--scholar);
+}
+
+.ai-task-status.success i {
+    color: var(--sage);
+}
+
+.ai-task-status.error i {
+    color: var(--vermillion);
+}
+
+.ai-task-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--sp-3);
+    max-height: 350px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
+.ai-task-line {
+    padding: 4px 0;
+    line-height: 1.5;
+    display: flex;
+    gap: var(--sp-2);
+}
+
+.ai-task-line.header {
+    color: var(--cerulean);
+    font-weight: 600;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin-top: 8px;
+}
+
+.ai-task-line.header:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 4px;
+}
+
+.ai-task-line.info {
+    color: #a0a0a0;
+}
+
+.ai-task-line.success {
+    color: var(--sage);
+}
+
+.ai-task-line.error {
+    color: var(--vermillion);
+}
+
+.ai-task-line.reasoning {
+    color: #c4b5fd;
+    font-style: italic;
+    padding-left: 16px;
+    border-left: 2px solid #7c3aed;
+    margin: 4px 0;
+}
+
+.ai-task-line.task {
+    color: #fbbf24;
+}
+
+.ai-task-line .icon {
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+}
+
+.ai-task-footer {
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--wash);
+    border-top: 1px solid var(--rule);
+    font-size: var(--text-xs);
+    color: var(--ink-muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 /* =====================================================
