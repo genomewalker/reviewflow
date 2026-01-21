@@ -4556,6 +4556,9 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                     </div>
                 </div>
 
+                <!-- Selection Toolbar -->
+                ${renderCollabSelectionToolbar()}
+
                 <!-- High Priority Items - Using same card format as All Comments -->
                 <div class="overview-panel high-priority">
                     <h3 class="overview-panel-title high-priority">
@@ -4728,6 +4731,9 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                     <span class="comments-count">Showing ${comments.length} of ${allComments.length}</span>
                 </div>
 
+                <!-- Selection Toolbar for Collaboration -->
+                ${renderCollabSelectionToolbar()}
+
                 <!-- Comments grouped by type if showing all -->
                 ${!currentFilter || currentFilter.type !== 'type' ? `
                     <!-- Major Comments Section -->
@@ -4880,11 +4886,17 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                 `;
             }
 
+            const isSelected = collabSelectedComments.has(comment.id);
             return `
-                <div class="comment-card ${priorityClass}">
+                <div class="comment-card ${priorityClass} ${isSelected ? 'collab-selected' : ''}" data-comment-id="${comment.id}">
                     <!-- Compact Header -->
                     <div class="comment-card-header">
                         <div class="comment-badges">
+                            <label class="collab-checkbox-wrapper" title="Select for collaboration export" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="collab-card-checkbox"
+                                       ${isSelected ? 'checked' : ''}
+                                       onchange="toggleCollabFromCard('${comment.id}')">
+                            </label>
                             <a href="javascript:void(0)" class="comment-id comment-link-pill" onclick="openCommentModal('${comment.reviewerId}', '${comment.id}')" title="Open ${comment.id} in Response Builder">${comment.id}</a>
                             <span class="badge ${comment.type === 'major' ? 'badge-major' : 'badge-minor'}">${comment.type}</span>
                             <span class="badge badge-secondary">${comment.category}</span>
@@ -7274,6 +7286,40 @@ Your response:`;
                             <button onclick="exportToWord()" class="btn btn-secondary">
                                 <i class="fas fa-download"></i> Simple Export
                             </button>
+                        </div>
+                    </section>
+
+                    <!-- Collaboration Export -->
+                    <section class="export-section">
+                        <h2><i class="fas fa-users"></i> Collaboration Export</h2>
+                        <p class="section-desc">Select specific comments to share with co-authors. Exports the rebuttal format plus the original reviewer text with selected comments highlighted.</p>
+
+                        <div class="collab-export-panel">
+                            <div class="collab-select-controls">
+                                <button onclick="toggleAllCollabComments(true)" class="btn btn-sm btn-ghost">
+                                    <i class="fas fa-check-square"></i> Select All
+                                </button>
+                                <button onclick="toggleAllCollabComments(false)" class="btn btn-sm btn-ghost">
+                                    <i class="fas fa-square"></i> Deselect All
+                                </button>
+                                <button onclick="selectCollabByStatus('in_progress')" class="btn btn-sm btn-ghost">
+                                    <i class="fas fa-spinner"></i> In Progress
+                                </button>
+                                <button onclick="selectCollabByType('major')" class="btn btn-sm btn-ghost">
+                                    <i class="fas fa-exclamation-circle"></i> Major Only
+                                </button>
+                                <span class="collab-count" id="collab-selected-count">0 selected</span>
+                            </div>
+
+                            <div class="collab-comments-list" id="collab-comments-list">
+                                ${renderCollabCommentsList()}
+                            </div>
+
+                            <div class="collab-export-actions">
+                                <button onclick="exportCollaboration()" class="btn btn-primary" id="collab-export-btn">
+                                    <i class="fas fa-file-export"></i> Export Selected for Review
+                                </button>
+                            </div>
                         </div>
                     </section>
 
@@ -9822,6 +9868,382 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                 if (btn) {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-magic"></i> Generate Rebuttal Letter';
+                }
+            }
+        }
+
+        // =====================================================
+        // COLLABORATION EXPORT - Share selected comments with co-authors
+        // =====================================================
+
+        // Track selected comments for collaboration export
+        let collabSelectedComments = new Set();
+
+        // Render the selection toolbar for collaboration
+        function renderCollabSelectionToolbar() {
+            const count = collabSelectedComments.size;
+            return `
+                <div class="collab-selection-toolbar">
+                    <div class="collab-toolbar-left">
+                        <i class="fas fa-users collab-toolbar-icon"></i>
+                        <span class="collab-toolbar-label">Collaboration:</span>
+                        <button onclick="selectAllVisibleComments()" class="btn btn-xs btn-ghost">
+                            <i class="fas fa-check-square"></i> Select All
+                        </button>
+                        <button onclick="clearCollabSelection()" class="btn btn-xs btn-ghost">
+                            <i class="fas fa-square"></i> Clear
+                        </button>
+                        <button onclick="selectCommentsByType('major')" class="btn btn-xs btn-ghost">
+                            <i class="fas fa-exclamation-circle"></i> Major
+                        </button>
+                        <button onclick="selectCommentsByStatus('in_progress')" class="btn btn-xs btn-ghost">
+                            <i class="fas fa-spinner"></i> In Progress
+                        </button>
+                    </div>
+                    <div class="collab-toolbar-right">
+                        ${count > 0 ? `
+                            <span class="collab-toolbar-count">${count} selected</span>
+                            <button onclick="setView('export')" class="btn btn-xs btn-primary">
+                                <i class="fas fa-file-export"></i> Export
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Select all visible comments
+        function selectAllVisibleComments() {
+            document.querySelectorAll('.comment-card[data-comment-id]').forEach(card => {
+                const commentId = card.dataset.commentId;
+                if (commentId) {
+                    collabSelectedComments.add(commentId);
+                    card.classList.add('collab-selected');
+                    const checkbox = card.querySelector('.collab-card-checkbox');
+                    if (checkbox) checkbox.checked = true;
+                }
+            });
+            updateCollabUI();
+            refreshCollabToolbar();
+        }
+
+        // Select comments by type
+        function selectCommentsByType(type) {
+            clearCollabSelection();
+            getAllComments().filter(c => c.type === type).forEach(c => {
+                collabSelectedComments.add(c.id);
+            });
+            // Update visible cards
+            document.querySelectorAll('.comment-card[data-comment-id]').forEach(card => {
+                const commentId = card.dataset.commentId;
+                if (collabSelectedComments.has(commentId)) {
+                    card.classList.add('collab-selected');
+                    const checkbox = card.querySelector('.collab-card-checkbox');
+                    if (checkbox) checkbox.checked = true;
+                }
+            });
+            updateCollabUI();
+            refreshCollabToolbar();
+        }
+
+        // Select comments by status
+        function selectCommentsByStatus(status) {
+            clearCollabSelection();
+            getAllComments().filter(c => c.status === status).forEach(c => {
+                collabSelectedComments.add(c.id);
+            });
+            // Update visible cards
+            document.querySelectorAll('.comment-card[data-comment-id]').forEach(card => {
+                const commentId = card.dataset.commentId;
+                if (collabSelectedComments.has(commentId)) {
+                    card.classList.add('collab-selected');
+                    const checkbox = card.querySelector('.collab-card-checkbox');
+                    if (checkbox) checkbox.checked = true;
+                }
+            });
+            updateCollabUI();
+            refreshCollabToolbar();
+        }
+
+        // Refresh the toolbar without full re-render
+        function refreshCollabToolbar() {
+            document.querySelectorAll('.collab-selection-toolbar').forEach(toolbar => {
+                toolbar.outerHTML = renderCollabSelectionToolbar();
+            });
+        }
+
+        // Render the list of comments with checkboxes for selection
+        function renderCollabCommentsList() {
+            const allComments = getAllComments();
+            if (allComments.length === 0) {
+                return '<p class="collab-empty">No comments available</p>';
+            }
+
+            let html = '';
+            reviewData.reviewers.forEach(reviewer => {
+                const reviewerComments = reviewer.comments || [];
+                if (reviewerComments.length === 0) return;
+
+                html += `<div class="collab-reviewer-group">
+                    <div class="collab-reviewer-header">
+                        <strong>${reviewer.name}</strong>
+                        <span class="collab-reviewer-count">${reviewerComments.length} comments</span>
+                    </div>
+                    <div class="collab-reviewer-comments">`;
+
+                reviewerComments.forEach(comment => {
+                    const isSelected = collabSelectedComments.has(comment.id);
+                    const hasResponse = comment.draft_response || expertDiscussions?.expert_discussions?.[comment.id]?.recommended_response;
+                    html += `
+                        <label class="collab-comment-item ${isSelected ? 'selected' : ''} ${comment.type}">
+                            <input type="checkbox"
+                                   ${isSelected ? 'checked' : ''}
+                                   onchange="toggleCollabComment('${comment.id}')"
+                                   data-comment-id="${comment.id}">
+                            <span class="collab-comment-id">${comment.id}</span>
+                            <span class="collab-comment-type badge-${comment.type}">${comment.type}</span>
+                            <span class="collab-comment-text">${(comment.original_text || '').substring(0, 80)}...</span>
+                            ${hasResponse ? '<i class="fas fa-check-circle collab-has-response" title="Has response"></i>' : ''}
+                        </label>
+                    `;
+                });
+
+                html += '</div></div>';
+            });
+
+            return html;
+        }
+
+        // Toggle a single comment selection
+        function toggleCollabComment(commentId) {
+            if (collabSelectedComments.has(commentId)) {
+                collabSelectedComments.delete(commentId);
+            } else {
+                collabSelectedComments.add(commentId);
+            }
+            // Update export page list item visual if visible
+            const listItem = document.querySelector(`.collab-comment-item input[data-comment-id="${commentId}"]`);
+            if (listItem) {
+                const label = listItem.closest('.collab-comment-item');
+                if (label) {
+                    label.classList.toggle('selected', collabSelectedComments.has(commentId));
+                }
+            }
+            updateCollabUI();
+        }
+
+        // Toggle from comment card checkbox (updates card visually too)
+        function toggleCollabFromCard(commentId) {
+            if (collabSelectedComments.has(commentId)) {
+                collabSelectedComments.delete(commentId);
+            } else {
+                collabSelectedComments.add(commentId);
+            }
+            // Update the card's visual state
+            const card = document.querySelector(`.comment-card[data-comment-id="${commentId}"]`);
+            if (card) {
+                card.classList.toggle('collab-selected', collabSelectedComments.has(commentId));
+            }
+            // Also update export page list if visible
+            const listItem = document.querySelector(`.collab-comment-item input[data-comment-id="${commentId}"]`);
+            if (listItem) {
+                listItem.checked = collabSelectedComments.has(commentId);
+                const label = listItem.closest('.collab-comment-item');
+                if (label) {
+                    label.classList.toggle('selected', collabSelectedComments.has(commentId));
+                }
+            }
+            updateCollabUI();
+            refreshCollabToolbar();
+        }
+
+        // Toggle all comments
+        function toggleAllCollabComments(selectAll) {
+            const allComments = getAllComments();
+            if (selectAll) {
+                allComments.forEach(c => collabSelectedComments.add(c.id));
+            } else {
+                collabSelectedComments.clear();
+            }
+            updateCollabUI();
+            // Re-render to update checkboxes
+            document.getElementById('collab-comments-list').innerHTML = renderCollabCommentsList();
+        }
+
+        // Select comments by status
+        function selectCollabByStatus(status) {
+            collabSelectedComments.clear();
+            getAllComments().filter(c => c.status === status).forEach(c => collabSelectedComments.add(c.id));
+            updateCollabUI();
+            document.getElementById('collab-comments-list').innerHTML = renderCollabCommentsList();
+        }
+
+        // Select comments by type
+        function selectCollabByType(type) {
+            collabSelectedComments.clear();
+            getAllComments().filter(c => c.type === type).forEach(c => collabSelectedComments.add(c.id));
+            updateCollabUI();
+            document.getElementById('collab-comments-list').innerHTML = renderCollabCommentsList();
+        }
+
+        // Update the UI to reflect selection state
+        function updateCollabUI() {
+            const countEl = document.getElementById('collab-selected-count');
+            if (countEl) {
+                countEl.textContent = `${collabSelectedComments.size} selected`;
+            }
+            const exportBtn = document.getElementById('collab-export-btn');
+            if (exportBtn) {
+                exportBtn.disabled = collabSelectedComments.size === 0;
+            }
+            updateCollabButton();
+        }
+
+        // Update the collaboration button in bottom bar
+        function updateCollabButton() {
+            const btn = document.getElementById('collab-btn');
+            const badge = document.getElementById('collab-count');
+            const panelCount = document.getElementById('collab-panel-count');
+            const panelList = document.getElementById('collab-panel-list');
+            const count = collabSelectedComments.size;
+
+            if (badge) badge.textContent = count;
+            if (panelCount) panelCount.textContent = count;
+
+            if (count > 0) {
+                btn?.classList.remove('hidden');
+            } else {
+                btn?.classList.add('hidden');
+                // Hide panel if no selection
+                document.getElementById('collab-panel')?.classList.add('hidden');
+            }
+
+            // Update panel list with selected comments
+            if (panelList && collabSelectedComments.size > 0) {
+                const allComments = getAllComments();
+                const selectedComments = allComments.filter(c => collabSelectedComments.has(c.id));
+                panelList.innerHTML = selectedComments.slice(0, 5).map(c => {
+                    const text = (c.original_text || '').substring(0, 60) + ((c.original_text || '').length > 60 ? '...' : '');
+                    return `<div class="collab-panel-item">
+                        <span class="collab-item-badge ${c.type}">${c.type}</span>
+                        <span class="collab-item-text">${escapeHtml(text)}</span>
+                        <button onclick="toggleCollabComment('${c.id}')" class="btn-icon btn-xs" title="Remove">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>`;
+                }).join('') + (selectedComments.length > 5 ? `<div class="collab-panel-more">+${selectedComments.length - 5} more...</div>` : '');
+            } else if (panelList) {
+                panelList.innerHTML = '<div class="collab-panel-empty">No comments selected</div>';
+            }
+        }
+
+        // Toggle collaboration panel visibility
+        function toggleCollabPanel() {
+            const panel = document.getElementById('collab-panel');
+            if (panel) {
+                panel.classList.toggle('hidden');
+            }
+        }
+
+        // Toggle a single comment in collab selection (for panel remove button)
+        function toggleCollabComment(commentId) {
+            if (collabSelectedComments.has(commentId)) {
+                collabSelectedComments.delete(commentId);
+            } else {
+                collabSelectedComments.add(commentId);
+            }
+            updateCollabUI();
+            updateCollabButton();
+            refreshCollabToolbar();
+        }
+
+        // Clear all collaboration selections
+        function clearCollabSelection() {
+            collabSelectedComments.clear();
+            // Update all checkboxes in cards
+            document.querySelectorAll('.collab-card-checkbox').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.comment-card.collab-selected').forEach(card => card.classList.remove('collab-selected'));
+            updateCollabUI();
+            // Update export page list if visible
+            const listEl = document.getElementById('collab-comments-list');
+            if (listEl) listEl.innerHTML = renderCollabCommentsList();
+            // Update toolbar
+            refreshCollabToolbar();
+        }
+
+        // Export selected comments for collaboration
+        async function exportCollaboration() {
+            if (collabSelectedComments.size === 0) {
+                showNotification('Please select at least one comment to export', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('collab-panel-export-btn') || document.getElementById('collab-export-btn');
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+                }
+
+                // Prepare export data
+                const selectedIds = Array.from(collabSelectedComments);
+                const exportData = {
+                    manuscript: reviewData.manuscript,
+                    selectedCommentIds: selectedIds,
+                    reviewers: reviewData.reviewers.map(r => ({
+                        name: r.name,
+                        expertise: r.expertise || '',
+                        comments: r.comments.map(c => {
+                            const expertData = expertDiscussions?.expert_discussions?.[c.id];
+                            const response = c.draft_response || c.recommended_response || expertData?.recommended_response;
+                            return {
+                                id: c.id,
+                                type: c.type,
+                                category: c.category,
+                                original_text: c.original_text,
+                                draft_response: response || '',
+                                location: c.location,
+                                isSelected: selectedIds.includes(c.id)
+                            };
+                        })
+                    }))
+                };
+
+                // Call API to generate collaboration export
+                const response = await fetch(`${API_BASE}/papers/${currentPaperId}/export/collaboration`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(exportData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to generate collaboration export');
+                }
+
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `collaboration_review_${currentPaperId}.docx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+
+                showNotification(`Exported ${collabSelectedComments.size} comments for collaboration`, 'success');
+
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-file-export"></i> Export Selected for Review';
+                }
+            } catch (error) {
+                console.error('Collaboration export error:', error);
+                showNotification('Export failed: ' + error.message, 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-file-export"></i> Export Selected for Review';
                 }
             }
         }

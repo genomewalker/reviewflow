@@ -3910,6 +3910,249 @@ function startApiServer(port = 3001) {
             return;
         }
 
+        // POST /papers/:id/export/collaboration - generate collaboration export document
+        const collabExportMatch = req.url.match(/^\/papers\/([^/]+)\/export\/collaboration$/);
+        if (req.method === 'POST' && collabExportMatch) {
+            const paperId = collabExportMatch[1];
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+                (async () => {
+                try {
+                    const exportData = JSON.parse(body);
+                    const selectedIds = exportData.selectedCommentIds || [];
+                    const children = [];
+
+                    // ========== PART 1: REBUTTAL FORMAT (selected comments only, no header) ==========
+
+                    // Title for rebuttal section
+                    children.push(new Paragraph({
+                        heading: HeadingLevel.HEADING_1,
+                        children: [new TextRun({ text: "Draft Responses for Review", bold: true, size: 32 })],
+                        spacing: { after: 200 }
+                    }));
+
+                    // Subtitle with selection info
+                    children.push(new Paragraph({
+                        children: [new TextRun({
+                            text: `${selectedIds.length} comment${selectedIds.length !== 1 ? 's' : ''} selected for co-author review`,
+                            size: 22,
+                            italics: true,
+                            color: '666666'
+                        })],
+                        spacing: { after: 400 }
+                    }));
+
+                    // Process each reviewer's selected comments
+                    for (const reviewer of exportData.reviewers || []) {
+                        const selectedComments = (reviewer.comments || []).filter(c => c.isSelected);
+                        if (selectedComments.length === 0) continue;
+
+                        // Reviewer header
+                        children.push(new Paragraph({
+                            heading: HeadingLevel.HEADING_2,
+                            children: [new TextRun({ text: reviewer.name, bold: true, size: 26 })],
+                            spacing: { before: 400, after: 200 }
+                        }));
+
+                        // Process each selected comment
+                        for (const comment of selectedComments) {
+                            // Comment number header
+                            children.push(new Paragraph({
+                                children: [
+                                    new TextRun({ text: `Comment ${comment.id}`, bold: true, size: 24 }),
+                                    comment.type === 'major'
+                                        ? new TextRun({ text: ' [MAJOR]', bold: true, color: 'DC2626', size: 20 })
+                                        : new TextRun({ text: ' [minor]', color: '6B7280', size: 20 })
+                                ],
+                                spacing: { before: 300, after: 100 }
+                            }));
+
+                            // Reviewer comment (italic, indented)
+                            const commentLines = (comment.original_text || '').split('\n');
+                            for (const line of commentLines) {
+                                if (line.trim()) {
+                                    children.push(new Paragraph({
+                                        children: [new TextRun({ text: line, italics: true, size: 22 })],
+                                        indent: { left: 400 },
+                                        shading: { type: ShadingType.CLEAR, fill: 'F3F4F6' },
+                                        spacing: { after: 50 }
+                                    }));
+                                }
+                            }
+
+                            children.push(new Paragraph({ spacing: { after: 150 } }));
+
+                            // Response header
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: "Draft Response:", bold: true, color: '059669', size: 22 })],
+                                spacing: { after: 100 }
+                            }));
+
+                            // Response text
+                            const responseText = comment.draft_response || '[No response drafted yet - please provide feedback]';
+                            const responseLines = responseText.split('\n');
+                            for (const line of responseLines) {
+                                if (line.trim()) {
+                                    children.push(new Paragraph({
+                                        children: [new TextRun({ text: line, size: 22 })],
+                                        indent: { left: 400 },
+                                        spacing: { after: 50 }
+                                    }));
+                                }
+                            }
+
+                            // Feedback box for co-authors
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: "Co-author feedback:", bold: true, color: '2563EB', size: 20 })],
+                                spacing: { before: 200, after: 50 }
+                            }));
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: "[Please add your comments here]", italics: true, color: '6B7280', size: 20 })],
+                                indent: { left: 400 },
+                                shading: { type: ShadingType.CLEAR, fill: 'EFF6FF' },
+                                spacing: { after: 50 }
+                            }));
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: " ", size: 22 })],
+                                indent: { left: 400 },
+                                shading: { type: ShadingType.CLEAR, fill: 'EFF6FF' },
+                                spacing: { after: 50 }
+                            }));
+                            children.push(new Paragraph({
+                                children: [new TextRun({ text: " ", size: 22 })],
+                                indent: { left: 400 },
+                                shading: { type: ShadingType.CLEAR, fill: 'EFF6FF' },
+                                spacing: { after: 200 }
+                            }));
+
+                            // Separator
+                            children.push(new Paragraph({
+                                border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' } },
+                                spacing: { after: 200 }
+                            }));
+                        }
+                    }
+
+                    // ========== PAGE BREAK ==========
+                    children.push(new Paragraph({
+                        children: [],
+                        pageBreakBefore: true
+                    }));
+
+                    // ========== PART 2: ORIGINAL REVIEWER DOCUMENT WITH HIGHLIGHTS ==========
+
+                    children.push(new Paragraph({
+                        heading: HeadingLevel.HEADING_1,
+                        children: [new TextRun({ text: "Original Reviewer Comments", bold: true, size: 32 })],
+                        spacing: { after: 200 }
+                    }));
+
+                    children.push(new Paragraph({
+                        children: [new TextRun({
+                            text: "Comments highlighted in yellow are those selected for review above.",
+                            size: 22,
+                            italics: true,
+                            color: '666666'
+                        })],
+                        spacing: { after: 400 }
+                    }));
+
+                    // Process all reviewers and all comments, highlighting selected ones
+                    for (const reviewer of exportData.reviewers || []) {
+                        if (!reviewer.comments || reviewer.comments.length === 0) continue;
+
+                        // Reviewer header
+                        children.push(new Paragraph({
+                            heading: HeadingLevel.HEADING_2,
+                            children: [new TextRun({ text: reviewer.name, bold: true, size: 26 })],
+                            spacing: { before: 400, after: 200 }
+                        }));
+
+                        // All comments from this reviewer
+                        for (const comment of reviewer.comments) {
+                            const isSelected = comment.isSelected;
+                            const highlightColor = isSelected ? 'FFFF00' : null; // Yellow highlight
+
+                            // Comment ID header
+                            children.push(new Paragraph({
+                                children: [
+                                    new TextRun({
+                                        text: `${comment.id}`,
+                                        bold: true,
+                                        size: 22,
+                                        highlight: isSelected ? 'yellow' : undefined
+                                    }),
+                                    new TextRun({ text: ' ', size: 22 }),
+                                    comment.type === 'major'
+                                        ? new TextRun({ text: '[MAJOR]', bold: true, color: 'DC2626', size: 18 })
+                                        : new TextRun({ text: '[minor]', color: '6B7280', size: 18 }),
+                                    isSelected
+                                        ? new TextRun({ text: ' ★ SELECTED FOR REVIEW', bold: true, color: '2563EB', size: 18 })
+                                        : new TextRun({ text: '' })
+                                ],
+                                spacing: { before: 200, after: 100 }
+                            }));
+
+                            // Comment text
+                            const commentLines = (comment.original_text || '').split('\n');
+                            for (const line of commentLines) {
+                                if (line.trim()) {
+                                    children.push(new Paragraph({
+                                        children: [new TextRun({
+                                            text: line,
+                                            size: 22,
+                                            highlight: isSelected ? 'yellow' : undefined
+                                        })],
+                                        spacing: { after: 50 }
+                                    }));
+                                }
+                            }
+
+                            children.push(new Paragraph({ spacing: { after: 150 } }));
+                        }
+                    }
+
+                    // Create document
+                    const doc = new Document({
+                        styles: {
+                            default: {
+                                document: {
+                                    run: { font: "Times New Roman", size: 24 }
+                                }
+                            }
+                        },
+                        sections: [{
+                            properties: {
+                                page: {
+                                    size: { width: 12240, height: 15840 },
+                                    margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+                                }
+                            },
+                            children: children
+                        }]
+                    });
+
+                    const buffer = await Packer.toBuffer(doc);
+                    const filename = `collaboration_review_${paperId}.docx`;
+
+                    res.writeHead(200, {
+                        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'Content-Disposition': `attachment; filename="${filename}"`,
+                        'Content-Length': buffer.length
+                    });
+                    res.end(buffer);
+                    log(`Generated collaboration export for paper ${paperId} (${selectedIds.length} comments)`);
+                } catch (e) {
+                    log(`Error generating collaboration export: ${e.message}`, 'ERROR');
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: e.message }));
+                }
+                })();
+            });
+            return;
+        }
+
         // GET /papers/:id/review-files - get review files for a specific paper
         const paperReviewFilesMatch = req.url.match(/^\/papers\/([^/]+)\/review-files$/);
         if (req.method === 'GET' && paperReviewFilesMatch) {

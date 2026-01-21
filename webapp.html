@@ -466,6 +466,12 @@
             <span id="processing-count" class="processing-badge">0</span>
         </button>
 
+        <!-- Collaboration Selection (shows when comments selected) -->
+        <button id="collab-btn" class="bottom-bar-btn hidden" onclick="toggleCollabPanel()" title="Collaboration Export">
+            <i class="fas fa-users"></i>
+            <span id="collab-count" class="collab-badge">0</span>
+        </button>
+
         <!-- Help -->
         <button id="help-btn" class="bottom-bar-btn" onclick="openHelpModal()" title="Help & Documentation">
             <i class="fas fa-question"></i>
@@ -507,6 +513,26 @@
         </div>
         <div id="processing-list" class="processing-list">
             <div class="processing-empty">No active tasks</div>
+        </div>
+    </div>
+
+    <!-- Collaboration Panel (popup for collaboration export) -->
+    <div id="collab-panel" class="collab-panel hidden">
+        <div class="collab-panel-header">
+            <span><i class="fas fa-users"></i> Collaboration Export</span>
+            <button onclick="toggleCollabPanel()" class="btn-icon"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="collab-panel-body">
+            <p class="collab-panel-info"><span id="collab-panel-count">0</span> comments selected for co-author review</p>
+            <div id="collab-panel-list" class="collab-panel-list"></div>
+            <div class="collab-panel-actions">
+                <button onclick="clearCollabSelection()" class="btn btn-sm btn-ghost">
+                    <i class="fas fa-times"></i> Clear Selection
+                </button>
+                <button onclick="exportCollaboration()" class="btn btn-sm btn-primary" id="collab-panel-export-btn">
+                    <i class="fas fa-file-export"></i> Export .docx
+                </button>
+            </div>
         </div>
     </div>
 
