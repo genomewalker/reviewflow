@@ -27,7 +27,7 @@ const os = require('os');
 const http = require('http');
 const crypto = require('crypto');
 const mammoth = require('mammoth');
-const { Document, Packer, Paragraph, TextRun, HeadingLevel, BorderStyle, ShadingType } = require('docx');
+const { Document, Packer, Paragraph, TextRun, HeadingLevel, BorderStyle, ShadingType, AlignmentType, NumberFormat, convertInchesToTwip } = require('docx');
 
 // Generate short UUID for paper IDs
 function generatePaperId() {
@@ -64,6 +64,275 @@ async function readFileAsText(filePath) {
         return null;
     }
     return null;
+}
+
+/**
+ * Convert markdown text to Word docx paragraphs
+ * Handles: headers, bold, italic, code, lists, blockquotes
+ */
+function markdownToWordParagraphs(markdownText, options = {}) {
+    const { highlight = false, baseSize = 22 } = options;
+    const paragraphs = [];
+    const lines = markdownText.split('\n');
+
+    let inCodeBlock = false;
+    let codeBlockContent = [];
+    let inBlockquote = false;
+    let blockquoteContent = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+
+        // Clean up Pandoc-style spans [text]{.mark} at line level
+        line = line.replace(/\[([^\]]*)\]\{[^}]*\}/g, '$1');
+
+        // Handle code blocks (```)
+        if (line.trim().startsWith('```')) {
+            if (inCodeBlock) {
+                // End code block - render accumulated content
+                if (codeBlockContent.length > 0) {
+                    paragraphs.push(new Paragraph({
+                        children: [new TextRun({
+                            text: codeBlockContent.join('\n'),
+                            font: 'Courier New',
+                            size: baseSize - 2,
+                            highlight: highlight ? 'yellow' : undefined
+                        })],
+                        shading: { type: ShadingType.SOLID, color: 'F3F4F6' },
+                        spacing: { before: 100, after: 100 },
+                        indent: { left: convertInchesToTwip(0.25), right: convertInchesToTwip(0.25) }
+                    }));
+                }
+                codeBlockContent = [];
+                inCodeBlock = false;
+            } else {
+                inCodeBlock = true;
+            }
+            continue;
+        }
+
+        if (inCodeBlock) {
+            codeBlockContent.push(line);
+            continue;
+        }
+
+        // Skip empty lines (but add spacing)
+        if (!line.trim()) {
+            if (blockquoteContent.length > 0) {
+                // End blockquote
+                paragraphs.push(new Paragraph({
+                    children: parseInlineMarkdown(blockquoteContent.join(' '), { highlight, baseSize, italics: true }),
+                    indent: { left: convertInchesToTwip(0.5) },
+                    border: { left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC' } },
+                    spacing: { before: 100, after: 100 }
+                }));
+                blockquoteContent = [];
+                inBlockquote = false;
+            }
+            continue;
+        }
+
+        // Handle headers
+        const headerMatch = line.match(/^(#{1,6})\s+(.+)$/);
+        if (headerMatch) {
+            const level = headerMatch[1].length;
+            const text = headerMatch[2];
+            const headingLevel = level === 1 ? HeadingLevel.HEADING_1 :
+                                level === 2 ? HeadingLevel.HEADING_2 :
+                                level === 3 ? HeadingLevel.HEADING_3 :
+                                HeadingLevel.HEADING_4;
+            const headingSize = level === 1 ? 28 : level === 2 ? 26 : level === 3 ? 24 : 22;
+
+            paragraphs.push(new Paragraph({
+                heading: headingLevel,
+                children: [new TextRun({
+                    text: text,
+                    bold: true,
+                    size: headingSize,
+                    highlight: highlight ? 'yellow' : undefined
+                })],
+                spacing: { before: 200, after: 100 }
+            }));
+            continue;
+        }
+
+        // Handle blockquotes
+        if (line.startsWith('>')) {
+            inBlockquote = true;
+            blockquoteContent.push(line.replace(/^>\s*/, ''));
+            continue;
+        }
+
+        // Handle unordered lists (- or *)
+        const ulMatch = line.match(/^(\s*)[-*]\s+(.+)$/);
+        if (ulMatch) {
+            const indent = Math.floor(ulMatch[1].length / 2);
+            const text = ulMatch[2];
+            paragraphs.push(new Paragraph({
+                children: parseInlineMarkdown(text, { highlight, baseSize }),
+                bullet: { level: indent },
+                spacing: { after: 50 }
+            }));
+            continue;
+        }
+
+        // Handle ordered lists (1. 2. etc)
+        const olMatch = line.match(/^(\s*)(\d+)\.\s+(.+)$/);
+        if (olMatch) {
+            const text = olMatch[3];
+            paragraphs.push(new Paragraph({
+                children: parseInlineMarkdown(text, { highlight, baseSize }),
+                numbering: { reference: 'default-numbering', level: 0 },
+                spacing: { after: 50 }
+            }));
+            continue;
+        }
+
+        // Handle horizontal rules
+        if (line.match(/^[-*_]{3,}$/)) {
+            paragraphs.push(new Paragraph({
+                border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } },
+                spacing: { before: 200, after: 200 }
+            }));
+            continue;
+        }
+
+        // Regular paragraph with inline formatting
+        paragraphs.push(new Paragraph({
+            children: parseInlineMarkdown(line, { highlight, baseSize }),
+            spacing: { after: 80 }
+        }));
+    }
+
+    // Handle any remaining blockquote content
+    if (blockquoteContent.length > 0) {
+        paragraphs.push(new Paragraph({
+            children: parseInlineMarkdown(blockquoteContent.join(' '), { highlight, baseSize, italics: true }),
+            indent: { left: convertInchesToTwip(0.5) },
+            border: { left: { style: BorderStyle.SINGLE, size: 12, color: 'CCCCCC' } },
+            spacing: { before: 100, after: 100 }
+        }));
+    }
+
+    return paragraphs;
+}
+
+/**
+ * Parse inline markdown formatting (bold, italic, code, links, Pandoc spans)
+ * Returns array of TextRun objects
+ */
+function parseInlineMarkdown(text, options = {}) {
+    const { highlight = false, baseSize = 22, italics = false, bold = false } = options;
+    const runs = [];
+
+    // First, clean up Pandoc-style spans [text]{.mark} or [text]{.class}
+    // These are generated when converting from Word - just extract the text
+    text = text.replace(/\[([^\]]*)\]\{[^}]*\}/g, '$1');
+
+    // Regex to match inline formatting
+    // Order matters: bold+italic first, then bold, then italic, then code, then links
+    const patterns = [
+        { regex: /\*\*\*(.+?)\*\*\*/g, style: { bold: true, italics: true } },
+        { regex: /___(.+?)___/g, style: { bold: true, italics: true } },
+        { regex: /\*\*(.+?)\*\*/g, style: { bold: true } },
+        { regex: /__(.+?)__/g, style: { bold: true } },
+        { regex: /\*(.+?)\*/g, style: { italics: true } },
+        { regex: /_(.+?)_/g, style: { italics: true } },
+        { regex: /`(.+?)`/g, style: { font: 'Courier New', size: baseSize - 2 } },
+        { regex: /\[([^\]]+)\]\([^)]+\)/g, style: { color: '0066CC', underline: {} } } // Links
+    ];
+
+    // Build a combined pattern to split the text
+    let lastIndex = 0;
+    const segments = [];
+
+    // Find all matches and their positions
+    const allMatches = [];
+    for (const { regex, style } of patterns) {
+        const re = new RegExp(regex.source, 'g');
+        let match;
+        while ((match = re.exec(text)) !== null) {
+            allMatches.push({
+                start: match.index,
+                end: match.index + match[0].length,
+                content: match[1],
+                style,
+                original: match[0]
+            });
+        }
+    }
+
+    // Sort by position
+    allMatches.sort((a, b) => a.start - b.start);
+
+    // Remove overlapping matches (keep the first one)
+    const filteredMatches = [];
+    let lastEnd = 0;
+    for (const match of allMatches) {
+        if (match.start >= lastEnd) {
+            filteredMatches.push(match);
+            lastEnd = match.end;
+        }
+    }
+
+    // Build runs
+    lastIndex = 0;
+    for (const match of filteredMatches) {
+        // Add plain text before this match
+        if (match.start > lastIndex) {
+            const plainText = text.substring(lastIndex, match.start);
+            if (plainText) {
+                runs.push(new TextRun({
+                    text: plainText,
+                    size: baseSize,
+                    bold: bold,
+                    italics: italics,
+                    highlight: highlight ? 'yellow' : undefined
+                }));
+            }
+        }
+
+        // Add formatted text
+        runs.push(new TextRun({
+            text: match.content,
+            size: match.style.size || baseSize,
+            bold: match.style.bold || bold,
+            italics: match.style.italics || italics,
+            font: match.style.font,
+            color: match.style.color,
+            underline: match.style.underline,
+            highlight: highlight ? 'yellow' : undefined
+        }));
+
+        lastIndex = match.end;
+    }
+
+    // Add remaining plain text
+    if (lastIndex < text.length) {
+        const remaining = text.substring(lastIndex);
+        if (remaining) {
+            runs.push(new TextRun({
+                text: remaining,
+                size: baseSize,
+                bold: bold,
+                italics: italics,
+                highlight: highlight ? 'yellow' : undefined
+            }));
+        }
+    }
+
+    // If no runs created, add the whole text as plain
+    if (runs.length === 0) {
+        runs.push(new TextRun({
+            text: text,
+            size: baseSize,
+            bold: bold,
+            italics: italics,
+            highlight: highlight ? 'yellow' : undefined
+        }));
+    }
+
+    return runs;
 }
 
 // Paper hash management for duplicate detection (uses database)
@@ -4086,7 +4355,6 @@ function startApiServer(port = 3001) {
                 try {
                     const exportData = JSON.parse(body);
                     const selectedIds = exportData.selectedCommentIds || [];
-                    const children = [];
 
                     // Load original review documents from database
                     const paperDir = path.join(PROJECT_FOLDER || BASE_DIR, 'papers', paperId);
@@ -4170,120 +4438,49 @@ function startApiServer(port = 3001) {
                         }
                     }
 
+                    // ========== BUILD MARKDOWN DOCUMENT FOR PANDOC CONVERSION ==========
+
+                    let markdownContent = '';
+
                     // ========== PART 1: SELECTED COMMENTS WITH SPACE FOR RESPONSE ==========
-
-                    // Title
-                    children.push(new Paragraph({
-                        heading: HeadingLevel.HEADING_1,
-                        children: [new TextRun({ text: "Comments for Co-Author Review", bold: true, size: 32 })],
-                        spacing: { after: 200 }
-                    }));
-
-                    // Subtitle with selection info
-                    children.push(new Paragraph({
-                        children: [new TextRun({
-                            text: `${selectedIds.length} comment${selectedIds.length !== 1 ? 's' : ''} selected - please provide your response below each comment`,
-                            size: 22,
-                            italics: true,
-                            color: '666666'
-                        })],
-                        spacing: { after: 400 }
-                    }));
+                    markdownContent += '# Comments for Co-Author Review\n\n';
+                    markdownContent += `*${selectedIds.length} comment${selectedIds.length !== 1 ? 's' : ''} selected - please provide your response below each comment*\n\n`;
 
                     // Process each reviewer's selected comments
                     for (const reviewer of exportData.reviewers || []) {
                         const selectedComments = (reviewer.comments || []).filter(c => c.isSelected);
                         if (selectedComments.length === 0) continue;
 
-                        // Reviewer header
-                        children.push(new Paragraph({
-                            heading: HeadingLevel.HEADING_2,
-                            children: [new TextRun({ text: reviewer.name, bold: true, size: 26 })],
-                            spacing: { before: 400, after: 200 }
-                        }));
+                        markdownContent += `## ${reviewer.name}\n\n`;
 
                         // Process each selected comment
                         for (const comment of selectedComments) {
-                            // Comment number header
-                            children.push(new Paragraph({
-                                children: [
-                                    new TextRun({ text: `Comment ${comment.id}`, bold: true, size: 24 }),
-                                    comment.type === 'major'
-                                        ? new TextRun({ text: ' [MAJOR]', bold: true, color: 'DC2626', size: 20 })
-                                        : new TextRun({ text: ' [minor]', color: '6B7280', size: 20 })
-                                ],
-                                spacing: { before: 300, after: 100 }
-                            }));
+                            const typeLabel = comment.type === 'major' ? ' **[MAJOR]**' : ' *[minor]*';
+                            markdownContent += `### Comment ${comment.id}${typeLabel}\n\n`;
 
-                            // Reviewer comment (italic, with gray background)
-                            const commentLines = (comment.original_text || '').split('\n');
-                            for (const line of commentLines) {
-                                if (line.trim()) {
-                                    children.push(new Paragraph({
-                                        children: [new TextRun({ text: line, italics: true, size: 22 })],
-                                        indent: { left: 400 },
-                                        shading: { type: ShadingType.CLEAR, fill: 'F3F4F6' },
-                                        spacing: { after: 50 }
-                                    }));
-                                }
-                            }
+                            // Reviewer comment as blockquote
+                            const commentText = (comment.original_text || '').trim();
+                            markdownContent += commentText.split('\n').map(line => `> ${line}`).join('\n') + '\n\n';
 
-                            children.push(new Paragraph({ spacing: { after: 150 } }));
-
-                            // Response header
-                            children.push(new Paragraph({
-                                children: [new TextRun({ text: "Your Response:", bold: true, color: '059669', size: 22 })],
-                                spacing: { after: 100 }
-                            }));
-
-                            // Empty lines for response (light blue background)
-                            for (let i = 0; i < 6; i++) {
-                                children.push(new Paragraph({
-                                    children: [new TextRun({ text: " ", size: 22 })],
-                                    indent: { left: 400 },
-                                    shading: { type: ShadingType.CLEAR, fill: 'EFF6FF' },
-                                    spacing: { after: 50 }
-                                }));
-                            }
-
-                            // Separator
-                            children.push(new Paragraph({
-                                border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' } },
-                                spacing: { after: 300 }
-                            }));
+                            // Response section
+                            markdownContent += '**Your Response:**\n\n';
+                            markdownContent += '\\  \n\\  \n\\  \n\\  \n\\  \n\\  \n\n';
+                            markdownContent += '---\n\n';
                         }
                     }
 
                     // ========== PAGE BREAK ==========
-                    children.push(new Paragraph({
-                        children: [],
-                        pageBreakBefore: true
-                    }));
+                    markdownContent += '\\newpage\n\n';
 
-                    // ========== PART 2: ORIGINAL REVIEWER DOCUMENT WITH HIGHLIGHTS ==========
-
-                    children.push(new Paragraph({
-                        heading: HeadingLevel.HEADING_1,
-                        children: [new TextRun({ text: "Original Reviewer Document", bold: true, size: 32 })],
-                        spacing: { after: 200 }
-                    }));
-
-                    children.push(new Paragraph({
-                        children: [new TextRun({
-                            text: "Selected comments are highlighted in yellow.",
-                            size: 22,
-                            italics: true,
-                            color: '666666'
-                        })],
-                        spacing: { after: 400 }
-                    }));
+                    // ========== PART 2: ORIGINAL REVIEWER DOCUMENT ==========
+                    markdownContent += '# Original Reviewer Document\n\n';
+                    markdownContent += '*Selected comments are highlighted in yellow.*\n\n';
 
                     // Get selected comment texts for highlighting
                     const selectedTexts = [];
                     for (const reviewer of exportData.reviewers || []) {
                         for (const comment of reviewer.comments || []) {
                             if (comment.isSelected && comment.original_text) {
-                                // Normalize the text for matching (first 100 chars to handle truncation)
                                 selectedTexts.push(comment.original_text.trim().substring(0, 100));
                             }
                         }
@@ -4291,108 +4488,85 @@ function startApiServer(port = 3001) {
 
                     // Process each reviewer's original document
                     for (const reviewer of exportData.reviewers || []) {
-                        // Reviewer header
-                        children.push(new Paragraph({
-                            heading: HeadingLevel.HEADING_2,
-                            children: [new TextRun({ text: reviewer.name, bold: true, size: 26 })],
-                            spacing: { before: 400, after: 200 }
-                        }));
+                        markdownContent += `## ${reviewer.name}\n\n`;
 
-                        // Use original document if available, otherwise fall back to extracted comments
-                        const docText = reviewer.original_document || '';
+                        let docText = reviewer.original_document || '';
 
                         if (docText.trim()) {
-                            // Split into paragraphs and check each for selected comments
-                            const paragraphs = docText.split(/\n\n+/);
+                            // First, strip existing Pandoc {.mark} spans from the original document
+                            // These come from Word-to-markdown conversion and we only want to highlight selected comments
+                            docText = docText.replace(/\[([^\]]*)\]\{\.mark\}/g, '$1');
 
-                            for (const para of paragraphs) {
-                                if (!para.trim()) continue;
+                            // Add the original document content with highlighting for selected comments
+                            const sections = docText.split(/\n\n+/);
 
-                                // Check if this paragraph contains any selected comment
-                                const paraStart = para.trim().substring(0, 100);
+                            for (const section of sections) {
+                                if (!section.trim()) continue;
+
+                                // Check if this section contains any selected comment
+                                const sectionText = section.trim();
                                 const isHighlighted = selectedTexts.some(selText =>
-                                    para.includes(selText.substring(0, 50)) ||
-                                    selText.includes(paraStart.substring(0, 50))
+                                    sectionText.includes(selText.substring(0, 50)) ||
+                                    selText.includes(sectionText.substring(0, 100).substring(0, 50))
                                 );
 
-                                // Split paragraph into lines
-                                const lines = para.split('\n');
-                                for (const line of lines) {
-                                    if (line.trim()) {
-                                        children.push(new Paragraph({
-                                            children: [new TextRun({
-                                                text: line,
-                                                size: 22,
-                                                highlight: isHighlighted ? 'yellow' : undefined
-                                            })],
-                                            spacing: { after: 50 }
-                                        }));
-                                    }
+                                if (isHighlighted) {
+                                    // Wrap in custom-style span for highlighting
+                                    markdownContent += `[${section}]{.mark}\n\n`;
+                                } else {
+                                    markdownContent += section + '\n\n';
                                 }
-                                children.push(new Paragraph({ spacing: { after: 100 } }));
                             }
                         } else {
-                            // Fallback: use extracted comments if no original document
-                            children.push(new Paragraph({
-                                children: [new TextRun({
-                                    text: "(Original document not available - showing extracted comments)",
-                                    size: 20,
-                                    italics: true,
-                                    color: '999999'
-                                })],
-                                spacing: { after: 200 }
-                            }));
+                            markdownContent += '*(Original document not available - showing extracted comments)*\n\n';
 
                             for (const comment of reviewer.comments || []) {
-                                const isSelected = comment.isSelected;
-                                const commentLines = (comment.original_text || '').split('\n');
-                                for (const line of commentLines) {
-                                    if (line.trim()) {
-                                        children.push(new Paragraph({
-                                            children: [new TextRun({
-                                                text: line,
-                                                size: 22,
-                                                highlight: isSelected ? 'yellow' : undefined
-                                            })],
-                                            spacing: { after: 50 }
-                                        }));
-                                    }
+                                const commentText = comment.original_text || '';
+                                if (comment.isSelected) {
+                                    markdownContent += `[${commentText}]{.mark}\n\n`;
+                                } else {
+                                    markdownContent += commentText + '\n\n';
                                 }
-                                children.push(new Paragraph({ spacing: { after: 150 } }));
                             }
                         }
                     }
 
-                    // Create document
-                    const doc = new Document({
-                        styles: {
-                            default: {
-                                document: {
-                                    run: { font: "Times New Roman", size: 24 }
-                                }
-                            }
-                        },
-                        sections: [{
-                            properties: {
-                                page: {
-                                    size: { width: 12240, height: 15840 },
-                                    margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
-                                }
-                            },
-                            children: children
-                        }]
-                    });
+                    // Convert using Pandoc
+                    const tmpDir = os.tmpdir();
+                    const tmpMd = path.join(tmpDir, `collab_${Date.now()}.md`);
+                    const tmpDocx = path.join(tmpDir, `collab_${Date.now()}.docx`);
 
-                    const buffer = await Packer.toBuffer(doc);
-                    const filename = `collaboration_review_${paperId}.docx`;
+                    fs.writeFileSync(tmpMd, markdownContent);
 
-                    res.writeHead(200, {
-                        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        'Content-Disposition': `attachment; filename="${filename}"`,
-                        'Content-Length': buffer.length
-                    });
-                    res.end(buffer);
-                    log(`Generated collaboration export for paper ${paperId} (${selectedIds.length} comments)`);
+                    try {
+                        // Use pandoc to convert markdown to docx
+                        execSync(`pandoc "${tmpMd}" -o "${tmpDocx}" --from=markdown --to=docx`, {
+                            timeout: 30000
+                        });
+
+                        const buffer = fs.readFileSync(tmpDocx);
+
+                        // Cleanup temp files
+                        try { fs.unlinkSync(tmpMd); } catch(e) {}
+                        try { fs.unlinkSync(tmpDocx); } catch(e) {}
+
+                        const filename = `collaboration_review_${paperId}.docx`;
+
+                        res.writeHead(200, {
+                            'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                            'Content-Disposition': `attachment; filename="${filename}"`,
+                            'Content-Length': buffer.length
+                        });
+                        res.end(buffer);
+                        log(`Generated collaboration export for paper ${paperId} (${selectedIds.length} comments) using Pandoc`);
+
+                    } catch (pandocErr) {
+                        // Cleanup temp files on error
+                        try { fs.unlinkSync(tmpMd); } catch(e) {}
+                        try { fs.unlinkSync(tmpDocx); } catch(e) {}
+                        throw new Error(`Pandoc conversion failed: ${pandocErr.message}`);
+                    }
+
                 } catch (e) {
                     log(`Error generating collaboration export: ${e.message}`, 'ERROR');
                     res.writeHead(500, { 'Content-Type': 'application/json' });
