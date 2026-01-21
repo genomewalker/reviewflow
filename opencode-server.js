@@ -3931,50 +3931,74 @@ function startApiServer(port = 3001) {
                     const selectedIds = exportData.selectedCommentIds || [];
                     const children = [];
 
-                    // Try to load original documents from reviews folder if not provided
+                    // Try to load original documents from paper folder if not provided
                     const paperDir = path.join(PROJECT_FOLDER || BASE_DIR, 'papers', paperId);
-                    const reviewsDir = path.join(paperDir, 'reviews');
 
+                    // Collect all review-related .txt and .md files from paper dir and reviews subdir
+                    let allReviewFiles = [];
+
+                    // Check paper root directory (where converted .md files are stored)
+                    if (fs.existsSync(paperDir)) {
+                        const rootFiles = fs.readdirSync(paperDir).filter(f =>
+                            (f.endsWith('.txt') || f.endsWith('.md')) &&
+                            (f.toLowerCase().includes('review') || f.toLowerCase().includes('referee'))
+                        );
+                        rootFiles.forEach(f => allReviewFiles.push({ name: f, dir: paperDir }));
+                    }
+
+                    // Also check reviews subdirectory
+                    const reviewsDir = path.join(paperDir, 'reviews');
                     if (fs.existsSync(reviewsDir)) {
-                        const reviewFiles = fs.readdirSync(reviewsDir).filter(f =>
+                        const subFiles = fs.readdirSync(reviewsDir).filter(f =>
                             f.endsWith('.txt') || f.endsWith('.md')
                         );
+                        subFiles.forEach(f => allReviewFiles.push({ name: f, dir: reviewsDir }));
+                    }
 
-                        // Try to match review files to reviewers by source_file or name
+                    log(`Found ${allReviewFiles.length} potential review files: ${allReviewFiles.map(f => f.name).join(', ')}`);
+
+                    // If we have review files, try to match them to reviewers
+                    if (allReviewFiles.length > 0) {
                         for (const reviewer of exportData.reviewers || []) {
                             if (!reviewer.original_document) {
-                                // Try to find matching file
                                 let matchedFile = null;
 
                                 // First try source_file match
                                 if (reviewer.source_file) {
                                     const baseName = path.basename(reviewer.source_file, path.extname(reviewer.source_file));
-                                    matchedFile = reviewFiles.find(f =>
-                                        f.includes(baseName) || baseName.includes(path.basename(f, path.extname(f)))
+                                    matchedFile = allReviewFiles.find(f =>
+                                        f.name.includes(baseName) || baseName.includes(path.basename(f.name, path.extname(f.name)))
                                     );
                                 }
 
-                                // Try name-based match
+                                // Try name-based match (reviewer number)
                                 if (!matchedFile) {
                                     const reviewerNum = reviewer.name?.match(/\d+/)?.[0];
                                     if (reviewerNum) {
-                                        matchedFile = reviewFiles.find(f =>
-                                            f.toLowerCase().includes(`reviewer${reviewerNum}`) ||
-                                            f.toLowerCase().includes(`reviewer_${reviewerNum}`) ||
-                                            f.toLowerCase().includes(`referee${reviewerNum}`) ||
-                                            f.toLowerCase().includes(`r${reviewerNum}`)
+                                        matchedFile = allReviewFiles.find(f =>
+                                            f.name.toLowerCase().includes(`reviewer${reviewerNum}`) ||
+                                            f.name.toLowerCase().includes(`reviewer_${reviewerNum}`) ||
+                                            f.name.toLowerCase().includes(`referee${reviewerNum}`) ||
+                                            f.name.toLowerCase().includes(`r${reviewerNum}.`)
                                         );
                                     }
+                                }
+
+                                // If still no match and only one review file exists, use it for all reviewers
+                                // (common case: single combined review document)
+                                if (!matchedFile && allReviewFiles.length === 1) {
+                                    matchedFile = allReviewFiles[0];
+                                    log(`Using single review file for all reviewers: ${matchedFile.name}`);
                                 }
 
                                 // Read the matched file
                                 if (matchedFile) {
                                     try {
-                                        const filePath = path.join(reviewsDir, matchedFile);
+                                        const filePath = path.join(matchedFile.dir, matchedFile.name);
                                         reviewer.original_document = fs.readFileSync(filePath, 'utf-8');
-                                        log(`Loaded original document for ${reviewer.name} from ${matchedFile}`);
+                                        log(`Loaded original document for ${reviewer.name} from ${matchedFile.name}`);
                                     } catch (e) {
-                                        log(`Could not read ${matchedFile}: ${e.message}`, 'WARN');
+                                        log(`Could not read ${matchedFile.name}: ${e.message}`, 'WARN');
                                     }
                                 }
                             }
