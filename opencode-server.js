@@ -3923,19 +3923,19 @@ function startApiServer(port = 3001) {
                     const selectedIds = exportData.selectedCommentIds || [];
                     const children = [];
 
-                    // ========== PART 1: REBUTTAL FORMAT (selected comments only, no header) ==========
+                    // ========== PART 1: SELECTED COMMENTS WITH SPACE FOR RESPONSE ==========
 
-                    // Title for rebuttal section
+                    // Title
                     children.push(new Paragraph({
                         heading: HeadingLevel.HEADING_1,
-                        children: [new TextRun({ text: "Draft Responses for Review", bold: true, size: 32 })],
+                        children: [new TextRun({ text: "Comments for Co-Author Review", bold: true, size: 32 })],
                         spacing: { after: 200 }
                     }));
 
                     // Subtitle with selection info
                     children.push(new Paragraph({
                         children: [new TextRun({
-                            text: `${selectedIds.length} comment${selectedIds.length !== 1 ? 's' : ''} selected for co-author review`,
+                            text: `${selectedIds.length} comment${selectedIds.length !== 1 ? 's' : ''} selected - please provide your response below each comment`,
                             size: 22,
                             italics: true,
                             color: '666666'
@@ -3968,7 +3968,7 @@ function startApiServer(port = 3001) {
                                 spacing: { before: 300, after: 100 }
                             }));
 
-                            // Reviewer comment (italic, indented)
+                            // Reviewer comment (italic, with gray background)
                             const commentLines = (comment.original_text || '').split('\n');
                             for (const line of commentLines) {
                                 if (line.trim()) {
@@ -3985,51 +3985,24 @@ function startApiServer(port = 3001) {
 
                             // Response header
                             children.push(new Paragraph({
-                                children: [new TextRun({ text: "Draft Response:", bold: true, color: '059669', size: 22 })],
+                                children: [new TextRun({ text: "Your Response:", bold: true, color: '059669', size: 22 })],
                                 spacing: { after: 100 }
                             }));
 
-                            // Response text
-                            const responseText = comment.draft_response || '[No response drafted yet - please provide feedback]';
-                            const responseLines = responseText.split('\n');
-                            for (const line of responseLines) {
-                                if (line.trim()) {
-                                    children.push(new Paragraph({
-                                        children: [new TextRun({ text: line, size: 22 })],
-                                        indent: { left: 400 },
-                                        spacing: { after: 50 }
-                                    }));
-                                }
+                            // Empty lines for response (light blue background)
+                            for (let i = 0; i < 6; i++) {
+                                children.push(new Paragraph({
+                                    children: [new TextRun({ text: " ", size: 22 })],
+                                    indent: { left: 400 },
+                                    shading: { type: ShadingType.CLEAR, fill: 'EFF6FF' },
+                                    spacing: { after: 50 }
+                                }));
                             }
-
-                            // Feedback box for co-authors
-                            children.push(new Paragraph({
-                                children: [new TextRun({ text: "Co-author feedback:", bold: true, color: '2563EB', size: 20 })],
-                                spacing: { before: 200, after: 50 }
-                            }));
-                            children.push(new Paragraph({
-                                children: [new TextRun({ text: "[Please add your comments here]", italics: true, color: '6B7280', size: 20 })],
-                                indent: { left: 400 },
-                                shading: { type: ShadingType.CLEAR, fill: 'EFF6FF' },
-                                spacing: { after: 50 }
-                            }));
-                            children.push(new Paragraph({
-                                children: [new TextRun({ text: " ", size: 22 })],
-                                indent: { left: 400 },
-                                shading: { type: ShadingType.CLEAR, fill: 'EFF6FF' },
-                                spacing: { after: 50 }
-                            }));
-                            children.push(new Paragraph({
-                                children: [new TextRun({ text: " ", size: 22 })],
-                                indent: { left: 400 },
-                                shading: { type: ShadingType.CLEAR, fill: 'EFF6FF' },
-                                spacing: { after: 200 }
-                            }));
 
                             // Separator
                             children.push(new Paragraph({
                                 border: { bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' } },
-                                spacing: { after: 200 }
+                                spacing: { after: 300 }
                             }));
                         }
                     }
@@ -4040,11 +4013,11 @@ function startApiServer(port = 3001) {
                         pageBreakBefore: true
                     }));
 
-                    // ========== PART 2: ORIGINAL REVIEWER DOCUMENT WITH HIGHLIGHTS ==========
+                    // ========== PART 2: COMPLETE REVIEWER DOCUMENT WITH HIGHLIGHTS ==========
 
                     children.push(new Paragraph({
                         heading: HeadingLevel.HEADING_1,
-                        children: [new TextRun({ text: "Original Reviewer Comments", bold: true, size: 32 })],
+                        children: [new TextRun({ text: "Complete Reviewer Comments", bold: true, size: 32 })],
                         spacing: { after: 200 }
                     }));
 
