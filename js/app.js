@@ -2735,7 +2735,7 @@ Before responding, verify you have:
                 // Update container to loaded state (green, no pulse)
                 if (container) container.className = 'ai-knowledge-loaded rounded-lg p-3 text-white';
                 if (icon) icon.className = 'fas fa-check-circle';
-                if (btnText) btnText.textContent = 'Update Context';
+                if (btnText) btnText.textContent = 'Update context';
             } else {
                 if (badge) {
                     badge.textContent = 'Not Loaded';
@@ -2747,7 +2747,7 @@ Before responding, verify you have:
                 // Update container to not-loaded state (amber, pulsing)
                 if (container) container.className = 'ai-knowledge-not-loaded rounded-lg p-3 text-white';
                 if (icon) icon.className = 'fas fa-exclamation-triangle ai-knowledge-warning-icon';
-                if (btnText) btnText.textContent = 'Load Context';
+                if (btnText) btnText.textContent = 'Load context';
             }
 
             // Also update chat window context badge
@@ -3158,7 +3158,7 @@ Confirm you understand the webapp context and are ready to help respond to revie
         function updateChatContextLink() {
             const linkText = document.getElementById('context-link-text');
             if (linkText) {
-                linkText.textContent = contextLoaded ? 'Update Context' : 'Load Context';
+                linkText.textContent = contextLoaded ? 'Update context' : 'Load context';
             }
         }
 
@@ -4307,12 +4307,12 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
 
             const views = {
                 'overview': { title: 'Overview', subtitle: 'Manuscript review summary and statistics', render: renderOverview },
-                'taskqueue': { title: 'Task Queue', subtitle: 'AI-optimized task order - drag to reorder', render: renderTaskQueue },
-                'comments': { title: 'All Comments', subtitle: 'Browse and manage all reviewer comments', render: renderAllComments },
-                'byreviewer': { title: 'By Reviewer', subtitle: 'View comments organized by reviewer', render: renderByReviewer },
-                'tags': { title: 'Tag Management', subtitle: 'Organize and manage comment tags', render: renderTagsView },
-                'agents': { title: 'AI Agents', subtitle: 'Specialized agents for response assistance', render: renderAgents },
-                'experts': { title: 'Expert Insights', subtitle: 'Multi-expert analysis of supplementary data', render: renderExperts },
+                'taskqueue': { title: 'Task queue', subtitle: 'AI-optimized task order - drag to reorder', render: renderTaskQueue },
+                'comments': { title: 'All comments', subtitle: 'Browse and manage all reviewer comments', render: renderAllComments },
+                'byreviewer': { title: 'By reviewer', subtitle: 'View comments organized by reviewer', render: renderByReviewer },
+                'tags': { title: 'Tag management', subtitle: 'Organize and manage comment tags', render: renderTagsView },
+                'agents': { title: 'AI agents', subtitle: 'Specialized agents for response assistance', render: renderAgents },
+                'experts': { title: 'Expert insights', subtitle: 'Multi-expert analysis of supplementary data', render: renderExperts },
                 'export': { title: 'Export', subtitle: 'Export responses and generate documents', render: renderExport }
             };
 
@@ -4431,7 +4431,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                             </div>
                             <div>
                                 <p class="overview-stat-value high">${byPriority.high || 0}</p>
-                                <p class="overview-stat-label">High Priority</p>
+                                <p class="overview-stat-label">High priority</p>
                             </div>
                         </div>
                     </div>
@@ -4476,13 +4476,13 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                     </div>
                 </div>
 
-                <!-- All Comments Quick Index - Separated by Major/Minor -->
+                <!-- All comments quick index - separated by major/minor -->
                 <div class="overview-panel">
                     <h3 class="overview-panel-title">
-                        <i class="fas fa-list"></i> All Comments - Click Any to Open
+                        <i class="fas fa-list"></i> All comments - click any to open
                     </h3>
 
-                    <!-- Major Comments -->
+                    <!-- Major comments -->
                     <div class="comments-index-section">
                         <div class="comments-index-header">
                             <span class="comments-index-dot major"></span>
@@ -4503,7 +4503,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                         </div>
                     </div>
 
-                    <!-- Minor Comments -->
+                    <!-- Minor comments -->
                     <div class="comments-index-section">
                         <div class="comments-index-header">
                             <span class="comments-index-dot minor"></span>
@@ -4827,12 +4827,12 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                     const pendingMinor = minorComments.filter(c => c.status !== 'completed');
                     const completedAll = comments.filter(c => c.status === 'completed');
                     return `
-                    <!-- Major Comments Section -->
+                    <!-- Major comments Section -->
                     ${pendingMajor.length > 0 ? `
                         <div class="comments-section">
                             <h3 class="comments-section-header major">
                                 <span class="section-dot"></span>
-                                Major Comments (${pendingMajor.length})
+                                Major comments (${pendingMajor.length})
                                 <span class="comments-section-subtitle">- Require substantive response</span>
                             </h3>
                             <div class="comments-list">
@@ -4841,12 +4841,12 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                         </div>
                     ` : ''}
 
-                    <!-- Minor Comments Section -->
+                    <!-- Minor comments Section -->
                     ${pendingMinor.length > 0 ? `
                         <div class="comments-section">
                             <h3 class="comments-section-header minor">
                                 <span class="section-dot"></span>
-                                Minor Comments (${pendingMinor.length})
+                                Minor comments (${pendingMinor.length})
                                 <span class="comments-section-subtitle">- Quick fixes and clarifications</span>
                             </h3>
                             <div class="comments-list">
@@ -5039,7 +5039,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                                        ${isSelected ? 'checked' : ''}
                                        onchange="toggleCollabFromCard('${comment.id}')">
                             </label>
-                            <a href="javascript:void(0)" class="comment-id comment-link-pill" onclick="openCommentModal('${comment.reviewerId}', '${comment.id}')" title="Open ${comment.id} in Response Builder">${comment.id}</a>
+                            <a href="javascript:void(0)" class="comment-id comment-link-pill" onclick="openCommentModal('${comment.reviewerId}', '${comment.id}')" title="Open ${comment.id} in Response builder">${comment.id}</a>
                             <span class="badge ${comment.type === 'major' ? 'badge-major' : 'badge-minor'}">${comment.type}</span>
                             <span class="badge badge-secondary">${comment.category}</span>
                             ${(comment.tags || []).map(tag => `<span class="tag-badge">${escapeHtml(tag)}</span>`).join('')}
@@ -5744,7 +5744,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                         <div class="discussion-header">
                             <div class="discussion-header-top">
                                 <div class="discussion-badges">
-                                    <a href="javascript:void(0)" class="discussion-id comment-link" onclick="navigateToComment('${commentId}')" title="Open ${commentId} in Response Builder">${commentId}</a>
+                                    <a href="javascript:void(0)" class="discussion-id comment-link" onclick="navigateToComment('${commentId}')" title="Open ${commentId} in Response builder">${commentId}</a>
                                     ${typeBadge}
                                     ${priorityBadge}
                                     <span class="badge badge-purple">${category}</span>
@@ -5789,7 +5789,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                                             </div>
                                             <p class="solution-text">${makeCommentIdsClickable(sol.response)}</p>
                                             <button onclick="useSolution('${commentId}', ${idx})" class="btn btn-sm ${idx === 0 ? 'btn-success' : 'btn-secondary'}">
-                                                <i class="fas fa-check"></i> Use This
+                                                <i class="fas fa-check"></i> Use this
                                             </button>
                                         </div>`;
                                     }).join('')}
@@ -7637,10 +7637,10 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                         <div class="collab-export-panel">
                             <div class="collab-select-controls">
                                 <button onclick="toggleAllCollabComments(true)" class="btn btn-sm btn-ghost">
-                                    <i class="fas fa-check-square"></i> Select All
+                                    <i class="fas fa-check-square"></i> Select all
                                 </button>
                                 <button onclick="toggleAllCollabComments(false)" class="btn btn-sm btn-ghost">
-                                    <i class="fas fa-square"></i> Deselect All
+                                    <i class="fas fa-square"></i> Deselect all
                                 </button>
                                 <button onclick="selectCollabByStatus('in_progress')" class="btn btn-sm btn-ghost">
                                     <i class="fas fa-spinner"></i> In Progress
@@ -7912,7 +7912,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
             if (!comment) return;
 
             editingComment = { reviewerId, commentId };
-            document.getElementById('modal-title').textContent = `Response Builder - ${comment.id}`;
+            document.getElementById('modal-title').textContent = `Response builder - ${comment.id}`;
 
             // Initialize actions_taken if not present
             if (!comment.actions_taken) comment.actions_taken = [];
@@ -7964,7 +7964,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                                     <div class="rb-rec-header">
                                         <span class="rb-rec-label"><i class="fas fa-magic"></i> AI recommended response</span>
                                     <button onclick="useRecommendedInModal('${commentId}')" class="btn btn-sm btn-success">
-                                        <i class="fas fa-check"></i> Use This
+                                        <i class="fas fa-check"></i> Use this
                                     </button>
                                 </div>
                                 <p class="rb-rec-text">${recommendedResponse.substring(0, 300)}${recommendedResponse.length > 300 ? '...' : ''}</p>
@@ -8141,7 +8141,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                                     </span>
                                 </div>
                                 <button onclick="openContextModal()" class="rb-context-btn">
-                                    ${contextLoaded ? 'Reload' : 'Load Context'}
+                                    ${contextLoaded ? 'Reload' : 'Load context'}
                                 </button>
                             </div>
 
@@ -8153,7 +8153,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                             <button onclick="askOpenCodeForResponse()"
                                     class="rb-generate-btn"
                                     id="ask-opencode-btn">
-                                <i class="fas fa-magic"></i> Generate Response
+                                <i class="fas fa-magic"></i> Generate response
                             </button>
                             <div id="opencode-loading" class="rb-loading hidden">
                                 <i class="fas fa-spinner fa-spin"></i>
@@ -8959,7 +8959,7 @@ Return ONLY a JSON array of tag strings, nothing else. Example: ["add-sample-siz
                 // Update buttons
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-magic"></i> Tag All Comments with AI';
+                    btn.innerHTML = '<i class="fas fa-magic"></i> Tag all comments with AI';
                 }
 
                 // Show done button, hide action and cancel buttons
@@ -9320,7 +9320,7 @@ Return ONLY a JSON object: {"domain": "x", "topic": "y", "actions": ["z"]}`;
                         <div class="flex items-center gap-3">
                             <i class="fas fa-history text-xl"></i>
                             <div>
-                                <h3 class="font-bold">Version History</h3>
+                                <h3 class="font-bold">Version history</h3>
                                 <p class="text-xs opacity-80">${commentId}</p>
                             </div>
                         </div>
@@ -10105,7 +10105,7 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                 // Restore button
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-download"></i> Generate Response Document';
+                    btn.innerHTML = '<i class="fas fa-download"></i> Generate response document';
                 }
             } catch (error) {
                 console.error('Export error:', error);
@@ -10115,7 +10115,7 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                 const btn = event?.target?.closest('button');
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-download"></i> Generate Response Document';
+                    btn.innerHTML = '<i class="fas fa-download"></i> Generate response document';
                 }
             }
         }
@@ -10228,7 +10228,7 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                         <i class="fas fa-users collab-toolbar-icon"></i>
                         <span class="collab-toolbar-label">Collaboration:</span>
                         <button onclick="selectAllVisibleComments()" class="btn btn-xs btn-ghost">
-                            <i class="fas fa-check-square"></i> Select All
+                            <i class="fas fa-check-square"></i> Select all
                         </button>
                         <button onclick="clearCollabSelection()" class="btn btn-xs btn-ghost">
                             <i class="fas fa-square"></i> Clear

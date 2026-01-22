@@ -38,7 +38,7 @@
                         <span id="completed-count" class="text-success" style="font-weight: 600;">0</span>
                     </div>
                     <div class="flex items-center justify-between" style="font-size: 13px;">
-                        <span class="text-secondary">In Progress</span>
+                        <span class="text-secondary">In progress</span>
                         <span id="inprogress-count" style="color: var(--scholar); font-weight: 600;">0</span>
                     </div>
                     <div class="flex items-center justify-between" style="font-size: 13px;">
@@ -56,16 +56,16 @@
             <nav class="sidebar-section" style="flex: 1;">
                 <ul class="nav-list">
                     <li class="nav-item"><button onclick="setView('overview')" class="nav-btn" data-view="overview"><i class="fas fa-home"></i><span>Overview</span></button></li>
-                    <li class="nav-item"><button onclick="setView('taskqueue')" class="nav-btn" data-view="taskqueue"><i class="fas fa-tasks"></i><span>Task Queue</span></button></li>
-                    <li class="nav-item"><button onclick="setView('comments')" class="nav-btn" data-view="comments"><i class="fas fa-comments"></i><span>All Comments</span></button></li>
-                    <li class="nav-item"><button onclick="setView('byreviewer')" class="nav-btn" data-view="byreviewer"><i class="fas fa-users"></i><span>By Reviewer</span></button></li>
+                    <li class="nav-item"><button onclick="setView('taskqueue')" class="nav-btn" data-view="taskqueue"><i class="fas fa-tasks"></i><span>Task queue</span></button></li>
+                    <li class="nav-item"><button onclick="setView('comments')" class="nav-btn" data-view="comments"><i class="fas fa-comments"></i><span>All comments</span></button></li>
+                    <li class="nav-item"><button onclick="setView('byreviewer')" class="nav-btn" data-view="byreviewer"><i class="fas fa-users"></i><span>By reviewer</span></button></li>
                     <li class="nav-item"><button onclick="setView('tags')" class="nav-btn" data-view="tags"><i class="fas fa-tags"></i><span>Tags</span></button></li>
-                    <li class="nav-item"><button onclick="setView('agents')" class="nav-btn" data-view="agents"><i class="fas fa-robot"></i><span>AI Agents</span></button></li>
-                    <li class="nav-item"><button onclick="setView('experts')" class="nav-btn" data-view="experts"><i class="fas fa-microscope"></i><span>Expert Insights</span></button></li>
+                    <li class="nav-item"><button onclick="setView('agents')" class="nav-btn" data-view="agents"><i class="fas fa-robot"></i><span>AI agents</span></button></li>
+                    <li class="nav-item"><button onclick="setView('experts')" class="nav-btn" data-view="experts"><i class="fas fa-microscope"></i><span>Expert insights</span></button></li>
                     <li class="nav-item"><button onclick="setView('export')" class="nav-btn" data-view="export"><i class="fas fa-file-export"></i><span>Export</span></button></li>
                 </ul>
                 <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule);">
-                    <button onclick="openSettingsModal()" class="nav-btn"><i class="fas fa-cog"></i><span>AI Settings</span></button>
+                    <button onclick="openSettingsModal()" class="nav-btn"><i class="fas fa-cog"></i><span>AI settings</span></button>
                 </div>
             </nav>
 
@@ -74,30 +74,30 @@
                 <div id="ai-knowledge-container" class="card" style="background: var(--ochre); color: white; padding: 12px;">
                     <div class="flex items-center justify-between mb-2">
                         <span style="font-size: 11px; font-weight: 500;"><i id="ai-knowledge-icon" class="fas fa-exclamation-triangle"></i> AI Knowledge</span>
-                        <span id="context-status-badge" style="font-size: 11px; background: rgba(255,255,255,0.3); padding: 2px 8px;">Not Loaded</span>
+                        <span id="context-status-badge" style="font-size: 11px; background: rgba(255,255,255,0.3); padding: 2px 8px;">Not loaded</span>
                     </div>
                     <p id="context-status-text" style="font-size: 11px; opacity: 0.9; margin-bottom: 8px;">Load manuscript & reviews for better AI</p>
                     <button onclick="openContextModal()" class="btn btn-sm" style="width: 100%; background: rgba(255,255,255,0.2); color: white; border: none;">
-                        <i class="fas fa-book-reader"></i> <span id="context-btn-text">Load Context</span>
+                        <i class="fas fa-book-reader"></i> <span id="context-btn-text">Load context</span>
                     </button>
                 </div>
             </div>
 
             <!-- Quick Filters -->
             <div class="sidebar-section">
-                <h3 class="section-title">Quick Filters</h3>
+                <h3 class="section-title">Quick filters</h3>
                 <div class="flex flex-col gap-1">
-                    <button onclick="filterByPriority('high')" class="nav-btn"><span class="status-dot" style="background: var(--rust);"></span>High Priority</button>
-                    <button onclick="filterByPriority('medium')" class="nav-btn"><span class="status-dot" style="background: var(--ochre);"></span>Medium Priority</button>
-                    <button onclick="filterByType('major')" class="nav-btn"><i class="fas fa-exclamation-circle" style="color: var(--purple);"></i>Major Comments</button>
+                    <button onclick="filterByPriority('high')" class="nav-btn"><span class="status-dot" style="background: var(--rust);"></span>High priority</button>
+                    <button onclick="filterByPriority('medium')" class="nav-btn"><span class="status-dot" style="background: var(--ochre);"></span>Medium priority</button>
+                    <button onclick="filterByType('major')" class="nav-btn"><i class="fas fa-exclamation-circle" style="color: var(--purple);"></i>Major comments</button>
                 </div>
             </div>
 
             <!-- Top Tags Quick Filter -->
             <div class="sidebar-section" id="top-tags-section">
                 <div class="flex items-center justify-between">
-                    <h3 class="section-title">Top Tags</h3>
-                    <button onclick="openTagAdminPanel()" class="btn-icon-sm" title="Manage Tags"><i class="fas fa-cog"></i></button>
+                    <h3 class="section-title">Top tags</h3>
+                    <button onclick="openTagAdminPanel()" class="btn-icon-sm" title="Manage tags"><i class="fas fa-cog"></i></button>
                 </div>
                 <div id="top-tags-list" class="flex flex-col gap-1">
                     <!-- Populated dynamically -->
@@ -119,7 +119,7 @@
 
                 <!-- Add New Tag -->
                 <div class="tag-admin-section">
-                    <h4>Add New Tag</h4>
+                    <h4>Add new tag</h4>
                     <div class="flex gap-2">
                         <input type="text" id="new-tag-input" class="form-input flex-1" placeholder="tag-name" onkeydown="if(event.key==='Enter')addNewGlobalTag()">
                         <button onclick="addNewGlobalTag()" class="btn btn-sm btn-primary"><i class="fas fa-plus"></i></button>
@@ -131,7 +131,7 @@
                     <h4>AI bulk tagging</h4>
                     <p class="text-muted text-sm mb-2">Automatically suggest tags for all comments</p>
                     <button onclick="startBulkAITagging()" id="bulk-ai-tag-btn" class="btn btn-primary w-full">
-                        <i class="fas fa-magic"></i> Tag All Comments with AI
+                        <i class="fas fa-magic"></i> Tag all comments with AI
                     </button>
                 </div>
 
@@ -139,13 +139,13 @@
                 <div class="tag-admin-section">
                     <h4>Reset</h4>
                     <button onclick="clearAllTags()" class="btn btn-ghost btn-danger-outline w-full">
-                        <i class="fas fa-trash"></i> Clear All Tags
+                        <i class="fas fa-trash"></i> Clear all tags
                     </button>
                 </div>
 
                 <!-- All Tags List -->
                 <div class="tag-admin-section">
-                    <h4>All Tags <span id="tag-count-badge" class="badge badge-secondary">0</span></h4>
+                    <h4>All tags <span id="tag-count-badge" class="badge badge-secondary">0</span></h4>
                     <div id="tag-admin-list" class="tag-admin-list">
                         <!-- Populated dynamically -->
                     </div>
@@ -227,7 +227,7 @@
                 <div class="flex items-center gap-3">
                     <div style="width: 36px; height: 36px; background: var(--vermillion); display: flex; align-items: center; justify-content: center; color: white;"><i class="fas fa-pen-to-square"></i></div>
                     <div>
-                        <h3 class="modal-title" id="modal-title">Response Builder</h3>
+                        <h3 class="modal-title" id="modal-title">Response builder</h3>
                         <p class="text-muted" style="font-size: 12px;">Craft your response to reviewer feedback</p>
                     </div>
                 </div>
@@ -238,7 +238,7 @@
                 <div class="text-muted" style="font-size: 12px;"><i class="fas fa-keyboard"></i> Press <kbd style="background: var(--paper-warm); padding: 2px 6px;">Esc</kbd> to close</div>
                 <div class="flex gap-3">
                     <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-                    <button onclick="saveComment()" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                    <button onclick="saveComment()" class="btn btn-primary"><i class="fas fa-save"></i> Save changes</button>
                 </div>
             </div>
         </div>
@@ -261,8 +261,8 @@
             <div class="modal-header" style="background: var(--scholar); color: white;">
                 <h3 class="modal-title" style="color: white;"><i class="fas fa-book-reader"></i> Load AI Context</h3>
                 <div class="flex items-center gap-2">
-                    <button onclick="selectAllFiles()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">Select All</button>
-                    <button onclick="selectNoneFiles()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">Select None</button>
+                    <button onclick="selectAllFiles()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">Select all</button>
+                    <button onclick="selectNoneFiles()" class="btn btn-sm" style="background: rgba(255,255,255,0.2); color: white; border: none;">Select none</button>
                     <button onclick="closeContextModal()" class="btn-icon" style="color: white;"><i class="fas fa-times"></i></button>
                 </div>
             </div>
@@ -273,7 +273,7 @@
                         <div class="flex items-center gap-3 p-3">
                             <i class="fas fa-spinner fa-spin" style="color: var(--scholar);"></i>
                             <div>
-                                <div style="font-weight: 500; color: var(--scholar);">Loading Files into AI Memory...</div>
+                                <div style="font-weight: 500; color: var(--scholar);">Loading files into AI memory...</div>
                                 <div id="context-loading-status" class="text-muted" style="font-size: 13px;">Initializing...</div>
                             </div>
                         </div>
@@ -291,7 +291,7 @@
                 <div class="flex gap-2">
                     <button onclick="clearContext()" class="btn btn-sm text-danger" style="background: transparent;"><i class="fas fa-trash"></i> Clear</button>
                     <button onclick="closeContextModal()" class="btn btn-secondary btn-sm">Cancel</button>
-                    <button onclick="loadContext()" id="load-context-main-btn" class="btn btn-primary btn-sm"><i class="fas fa-download"></i> Load Selected</button>
+                    <button onclick="loadContext()" id="load-context-main-btn" class="btn btn-primary btn-sm"><i class="fas fa-download"></i> Load selected</button>
                 </div>
             </div>
         </div>
@@ -301,23 +301,23 @@
     <div id="import-reviews-modal" class="modal-overlay hidden">
         <div class="modal" style="max-width: 800px;">
             <div class="modal-header" style="background: var(--purple); color: white;">
-                <h3 class="modal-title" style="color: white;"><i class="fas fa-file-import"></i> Import & Parse Reviews with AI</h3>
+                <h3 class="modal-title" style="color: white;"><i class="fas fa-file-import"></i> Import & parse reviews with AI</h3>
                 <button onclick="closeImportReviewsModal()" class="btn-icon" style="color: white;"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
                 <div id="import-step-content-1">
                     <div class="form-group">
-                        <label class="form-label">Paste Raw Reviewer Comments</label>
+                        <label class="form-label">Paste raw reviewer comments</label>
                         <textarea id="raw-reviews-input" class="form-textarea" rows="10" placeholder="Paste the complete reviewer comments here..."></textarea>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="form-group"><label class="form-label">Reviewer ID</label><input type="text" id="reviewer-id-input" class="form-input" value="R1" placeholder="R1, R2, etc."></div>
-                        <div class="form-group"><label class="form-label">Reviewer Name</label><input type="text" id="reviewer-name-input" class="form-input" value="Referee #1" placeholder="Referee #1"></div>
+                        <div class="form-group"><label class="form-label">Reviewer name</label><input type="text" id="reviewer-name-input" class="form-input" value="Referee #1" placeholder="Referee #1"></div>
                     </div>
                 </div>
                 <div id="import-step-content-2" class="hidden">
                     <div class="flex items-center justify-between mb-3">
-                        <h4 style="font-weight: 500;">Extracted Comments</h4>
+                        <h4 style="font-weight: 500;">Extracted comments</h4>
                         <span id="extracted-count" class="text-muted" style="font-size: 13px;">0 comments found</span>
                     </div>
                     <div id="extracted-comments-list" class="card" style="max-height: 300px; overflow-y: auto;"></div>
@@ -343,7 +343,7 @@
                 <button onclick="prevImportStep()" id="import-prev-btn" class="btn btn-secondary btn-sm hidden"><i class="fas fa-arrow-left"></i> Back</button>
                 <div class="flex gap-2" style="margin-left: auto;">
                     <button onclick="closeImportReviewsModal()" class="btn btn-secondary btn-sm">Cancel</button>
-                    <button onclick="nextImportStep()" id="import-next-btn" class="btn btn-sm" style="background: var(--purple); color: white;"><i class="fas fa-magic"></i> Extract Comments</button>
+                    <button onclick="nextImportStep()" id="import-next-btn" class="btn btn-sm" style="background: var(--purple); color: white;"><i class="fas fa-magic"></i> Extract comments</button>
                 </div>
             </div>
         </div>
@@ -359,7 +359,7 @@
             <div class="modal-body">
                 <div class="form-group"><label class="form-label">Model</label><select id="settings-model" class="form-select"><option value="github-copilot/gpt-5.2">GPT-5.2 (Copilot)</option><option value="openai/gpt-5.2-codex">GPT-5.2 Codex</option></select></div>
                 <div class="form-group"><label class="form-label">Agent</label><select id="settings-agent" class="form-select"><option value="general">General</option><option value="plan">Plan</option><option value="build">Build</option></select></div>
-                <div class="form-group"><label class="form-label">Reasoning Effort</label><select id="settings-variant" class="form-select"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="max">Max</option></select></div>
+                <div class="form-group"><label class="form-label">Reasoning effort</label><select id="settings-variant" class="form-select"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="max">Max</option></select></div>
 
                 <!-- Session Info -->
                 <div class="settings-divider"></div>
@@ -375,12 +375,12 @@
                     </div>
                 </div>
                 <button onclick="resetSession()" class="btn btn-ghost btn-sm session-reset-btn">
-                    <i class="fas fa-rotate-right"></i> Reset Session
+                    <i class="fas fa-rotate-right"></i> Reset session
                 </button>
             </div>
             <div class="modal-footer">
                 <button onclick="closeSettingsModal()" class="btn btn-secondary">Cancel</button>
-                <button onclick="saveSettings()" class="btn btn-primary">Save Settings</button>
+                <button onclick="saveSettings()" class="btn btn-primary">Save settings</button>
             </div>
         </div>
     </div>
@@ -389,7 +389,7 @@
     <div id="clean-start-modal" class="modal-overlay hidden">
         <div class="modal" style="max-width: 500px;">
             <div class="modal-header">
-                <h3 class="modal-title"><i class="fas fa-redo"></i> Clean Start</h3>
+                <h3 class="modal-title"><i class="fas fa-redo"></i> Clean start</h3>
                 <button onclick="closeCleanStartModal()" class="btn-icon"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body">
@@ -508,7 +508,7 @@
     <!-- Processing Panel (popup showing all background tasks) -->
     <div id="processing-panel" class="processing-panel hidden">
         <div class="processing-panel-header">
-            <span><i class="fas fa-tasks"></i> Background Tasks</span>
+            <span><i class="fas fa-tasks"></i> Background tasks</span>
             <button onclick="toggleProcessingPanel()" class="btn-icon"><i class="fas fa-times"></i></button>
         </div>
         <div id="processing-list" class="processing-list">
@@ -519,7 +519,7 @@
     <!-- Collaboration Panel (popup for collaboration export) -->
     <div id="collab-panel" class="collab-panel hidden">
         <div class="collab-panel-header">
-            <span><i class="fas fa-users"></i> Collaboration Export</span>
+            <span><i class="fas fa-users"></i> Collaboration export</span>
             <button onclick="toggleCollabPanel()" class="btn-icon"><i class="fas fa-times"></i></button>
         </div>
         <div class="collab-panel-body">
@@ -527,7 +527,7 @@
             <div id="collab-panel-list" class="collab-panel-list"></div>
             <div class="collab-panel-actions">
                 <button onclick="clearCollabSelection()" class="btn btn-sm btn-ghost">
-                    <i class="fas fa-times"></i> Clear Selection
+                    <i class="fas fa-times"></i> Clear selection
                 </button>
                 <button onclick="exportCollaboration()" class="btn btn-sm btn-primary" id="collab-panel-export-btn">
                     <i class="fas fa-file-export"></i> Export .docx
@@ -585,16 +585,16 @@
             <div class="modal-body" style="padding: 0; overflow-y: auto; max-height: calc(90vh - 140px);">
                 <!-- Quick Start -->
                 <div style="padding: 24px; background: linear-gradient(135deg, #EEF2FF, #F5F3FF);">
-                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-rocket" style="color: #4F46E5;"></i> Quick Start</h4>
+                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-rocket" style="color: #4F46E5;"></i> Quick start</h4>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
                         <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #E5E7EB;">
                             <div style="font-size: 24px; margin-bottom: 8px;">1</div>
-                            <strong>Import Reviews</strong>
+                            <strong>Import reviews</strong>
                             <p style="font-size: 13px; color: #6B7280; margin-top: 4px;">Click "Process Paper" and paste or upload your reviewer comments</p>
                         </div>
                         <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #E5E7EB;">
                             <div style="font-size: 24px; margin-bottom: 8px;">2</div>
-                            <strong>Load Context</strong>
+                            <strong>Load context</strong>
                             <p style="font-size: 13px; color: #6B7280; margin-top: 4px;">Load your manuscript for better AI responses</p>
                         </div>
                         <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #E5E7EB;">
@@ -607,12 +607,12 @@
 
                 <!-- Features Guide -->
                 <div style="padding: 24px;">
-                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-compass" style="color: #10B981;"></i> Feature Guide</h4>
+                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-compass" style="color: #10B981;"></i> Feature guide</h4>
 
                     <div class="help-section" style="margin-bottom: 20px;">
                         <h5 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
                             <span style="width: 28px; height: 28px; background: #EEF2FF; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #4F46E5;"><i class="fas fa-tasks"></i></span>
-                            Task Queue
+                            Task queue
                         </h5>
                         <p style="font-size: 13px; color: #4B5563; margin-left: 36px;">Your main workspace. Shows all comments organized by priority. Click any comment to edit your response.</p>
                     </div>
@@ -628,7 +628,7 @@
                     <div class="help-section" style="margin-bottom: 20px;">
                         <h5 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
                             <span style="width: 28px; height: 28px; background: #FEF3C7; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #F59E0B;"><i class="fas fa-microscope"></i></span>
-                            Expert Insights
+                            Expert insights
                         </h5>
                         <p style="font-size: 13px; color: #4B5563; margin-left: 36px;">View AI-generated expert panel discussions for each comment. Get multiple response strategies with different effort levels.</p>
                     </div>
@@ -636,7 +636,7 @@
                     <div class="help-section" style="margin-bottom: 20px;">
                         <h5 style="font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
                             <span style="width: 28px; height: 28px; background: #FCE7F3; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #EC4899;"><i class="fas fa-lightbulb"></i></span>
-                            Potential Solutions
+                            Potential solutions
                         </h5>
                         <p style="font-size: 13px; color: #4B5563; margin-left: 36px;">Each comment gets 2-3 response strategies: Quick (low effort), Detailed (medium), and Thorough (high effort). Click "Use This" to apply.</p>
                     </div>
@@ -652,7 +652,7 @@
 
                 <!-- Keyboard Shortcuts -->
                 <div style="padding: 24px; background: #F9FAFB; border-top: 1px solid #E5E7EB;">
-                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-keyboard" style="color: #6B7280;"></i> Keyboard Shortcuts</h4>
+                    <h4 style="margin-bottom: 16px; font-size: 16px;"><i class="fas fa-keyboard" style="color: #6B7280;"></i> Keyboard shortcuts</h4>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-size: 13px;">Close modal</span>
@@ -683,7 +683,7 @@
                             <i class="fab fa-github"></i> GitHub
                         </a>
                         <a href="https://github.com/genomewalker/reviewflow/issues" target="_blank" style="display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #FEF3C7; border-radius: 8px; text-decoration: none; color: #B45309; font-size: 13px; font-weight: 500;">
-                            <i class="fas fa-bug"></i> Report Issue
+                            <i class="fas fa-bug"></i> Report issue
                         </a>
                     </div>
                 </div>
