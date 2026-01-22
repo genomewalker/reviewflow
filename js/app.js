@@ -4409,7 +4409,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                             </div>
                             <div>
                                 <p class="overview-stat-value">${allComments.length}</p>
-                                <p class="overview-stat-label">Total Comments</p>
+                                <p class="overview-stat-label">Total comments</p>
                             </div>
                         </div>
                     </div>
@@ -4733,20 +4733,20 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                             <span class="comments-summary-label minor">${totalMinor} Minor</span>
                         </div>
                         <span class="comments-summary-divider">|</span>
-                        <span class="comments-summary-total">${allComments.length} Total Comments</span>
+                        <span class="comments-summary-total">${allComments.length} Total comments</span>
                     </div>
                     <div class="comments-filter-btns">
                         <button onclick="filterByType('major')"
                                 class="filter-btn major ${currentFilter?.type === 'type' && currentFilter?.value === 'major' ? 'active' : ''}">
-                            Show Major Only
+                            Show major only
                         </button>
                         <button onclick="filterByType('minor')"
                                 class="filter-btn minor ${currentFilter?.type === 'type' && currentFilter?.value === 'minor' ? 'active' : ''}">
-                            Show Minor Only
+                            Show minor only
                         </button>
                         <button onclick="clearFilter()"
                                 class="filter-btn all ${!currentFilter ? 'active' : ''}">
-                            Show All
+                            Show all
                         </button>
                     </div>
                     <div class="comments-filter-btns status-filters">
@@ -4756,7 +4756,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                         </button>
                         <button onclick="filterByStatus('in_progress')"
                                 class="filter-btn in-progress ${currentFilter?.type === 'status' && currentFilter?.value === 'in_progress' ? 'active' : ''}">
-                            <i class="fas fa-spinner"></i> In Progress (${allComments.filter(c => c.status === 'in_progress').length})
+                            <i class="fas fa-spinner"></i> In progress (${allComments.filter(c => c.status === 'in_progress').length})
                         </button>
                         <button onclick="filterByStatus('pending')"
                                 class="filter-btn pending ${currentFilter?.type === 'status' && currentFilter?.value === 'pending' ? 'active' : ''}">
@@ -5852,7 +5852,7 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                 <div class="expert-stats-grid">
                     <div class="expert-stat-card">
                         <div class="expert-stat-value">${allCommentIds.length}</div>
-                        <div class="expert-stat-label">Total Comments</div>
+                        <div class="expert-stat-label">Total comments</div>
                     </div>
                     <div class="expert-stat-card">
                         <div class="expert-stat-value" style="color: var(--sage);">${withExpertCount}</div>
@@ -7643,7 +7643,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                                     <i class="fas fa-square"></i> Deselect all
                                 </button>
                                 <button onclick="selectCollabByStatus('in_progress')" class="btn btn-sm btn-ghost">
-                                    <i class="fas fa-spinner"></i> In Progress
+                                    <i class="fas fa-spinner"></i> In progress
                                 </button>
                                 <button onclick="selectCollabByType('major')" class="btn btn-sm btn-ghost">
                                     <i class="fas fa-exclamation-circle"></i> Major Only
@@ -8179,7 +8179,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                                     </button>
                                     <select id="edit-status" class="text-xs px-3 py-1.5 border rounded-lg bg-gray-50" onchange="updateCommentStatus(this.value)">
                                         <option value="pending" ${comment.status === 'pending' ? 'selected' : ''}>Pending</option>
-                                        <option value="in_progress" ${comment.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                                        <option value="in_progress" ${comment.status === 'in_progress' ? 'selected' : ''}>In progress</option>
                                         <option value="completed" ${comment.status === 'completed' ? 'selected' : ''}>Completed</option>
                                     </select>
                                 </div>
@@ -10237,7 +10237,7 @@ Provide expert guidance based on the manuscript context you have loaded. Be scie
                             <i class="fas fa-exclamation-circle"></i> Major
                         </button>
                         <button onclick="selectCommentsByStatus('in_progress')" class="btn btn-xs btn-ghost">
-                            <i class="fas fa-spinner"></i> In Progress
+                            <i class="fas fa-spinner"></i> In progress
                         </button>
                     </div>
                     <div class="collab-toolbar-right">
