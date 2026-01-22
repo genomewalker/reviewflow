@@ -276,19 +276,19 @@ const API_BASE = 'http://localhost:3001';
 
                 if (hasExpert) {
                     iconClass = 'fa-brain';
-                    title = 'Generating Expert Analysis';
+                    title = 'Generating expert analysis';
                 } else if (hasTag) {
                     iconClass = 'fa-tags';
-                    title = 'AI Tag Generation';
+                    title = 'Generating tags';
                 } else if (hasExtract) {
                     iconClass = 'fa-file-import';
-                    title = 'Extracting Comments';
+                    title = 'Extracting comments';
                 } else if (hasOptimize) {
                     iconClass = 'fa-sort-amount-up';
-                    title = 'Optimizing Task Order';
+                    title = 'Optimizing task order';
                 } else if (hasConsistency) {
                     iconClass = 'fa-link';
-                    title = 'Checking Consistency';
+                    title = 'Checking consistency';
                 }
 
                 // Update icon
@@ -1207,7 +1207,7 @@ Ask me anything about this comment, or request a draft response.`;
             if (importCurrentStep === 1) {
                 nextBtn.innerHTML = '<i class="fas fa-magic mr-1"></i>Extract Comments';
             } else if (importCurrentStep === 2) {
-                nextBtn.innerHTML = '<i class="fas fa-brain mr-1"></i>Generate Expert Analysis';
+                nextBtn.innerHTML = '<i class="fas fa-brain mr-1"></i>Generate expert analysis';
             } else {
                 nextBtn.innerHTML = '<i class="fas fa-check mr-1"></i>Import to Rebuttr';
             }
@@ -1561,7 +1561,7 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
 
                 // Update title
                 document.getElementById('progress-widget-title').textContent =
-                    data.status === 'completed' ? 'Processing Complete' : 'Processing Failed';
+                    data.status === 'completed' ? 'Processing complete' : 'Processing failed';
 
                 // Reload data if completed successfully
                 if (data.status === 'completed' && activeJobPaperId) {
@@ -1650,7 +1650,7 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
                     startProgressPolling(jobId, paperId);
                 } else if (status.status === 'completed' || status.status === 'failed') {
                     // Show completed/failed state briefly
-                    showProgressWidget(status.status === 'completed' ? 'Processing Complete' : 'Processing Failed');
+                    showProgressWidget(status.status === 'completed' ? 'Processing complete' : 'Processing failed');
                     updateProgressWidget(status);
                 }
             } catch (e) {
@@ -1763,10 +1763,10 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
             closeCleanStartModal();
 
             const titles = {
-                'clear-all': 'Clearing All Data',
+                'clear-all': 'Clearing all data',
                 're-extract': 'Re-extracting Reviews',
-                'clear-experts': 'Clearing Expert Analysis',
-                'clear-responses': 'Clearing Draft Responses'
+                'clear-experts': 'Clearing expert analysis',
+                'clear-responses': 'Clearing draft responses'
             };
 
             showProgress(titles[selected] || 'Processing...', {
@@ -3744,7 +3744,7 @@ Write a professional response in PAST TENSE. Be concise, use specific data from 
             // Default: no pre-generated insights
             return `
 No expert insights pre-generated for this comment.
-Use the "Generate Expert Analysis" button to create insights using OpenCode.
+Use the "Generate expert analysis" button to create insights using OpenCode.
 `;
         }
 
@@ -4577,7 +4577,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                 <!-- High Priority Items - Using same card format as All Comments -->
                 <div class="overview-panel high-priority">
                     <h3 class="overview-panel-title high-priority">
-                        <i class="fas fa-fire"></i> High Priority Items Requiring Attention
+                        <i class="fas fa-fire"></i> High priority items requiring attention
                         <span class="high-priority-count">(${allComments.filter(c => c.priority === 'high' && c.status !== 'completed').length} remaining)</span>
                     </h3>
                     <div class="overview-comments-list">
@@ -5061,31 +5061,31 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                     <!-- Collapsible Details -->
                     <details class="comment-details">
                         <summary class="comment-details-summary">
-                            <i class="fas fa-chevron-down"></i> Show Full Comment & Expert Analysis
+                            <i class="fas fa-chevron-down"></i> Show full comment & expert analysis
                         </summary>
                         <div class="comment-details-content">
-                            <!-- Full Reviewer Comment -->
+                            <!-- Full reviewer comment -->
                             <div class="full-comment-box">
-                                <p class="full-comment-label"><i class="fas fa-quote-left"></i> Full Reviewer Comment:</p>
+                                <p class="full-comment-label"><i class="fas fa-quote-left"></i> Full reviewer comment:</p>
                                 <p class="full-comment-text">${comment.original_text}</p>
                             </div>
                             ${comment.location ? `
                                 <div class="manuscript-context-box">
-                                    <p class="manuscript-context-label"><i class="fas fa-file-alt"></i> Manuscript Reference: <strong>${comment.location}</strong></p>
+                                    <p class="manuscript-context-label"><i class="fas fa-file-alt"></i> Manuscript reference: <strong>${comment.location}</strong></p>
                                     ${comment.full_context ? `
                                         <pre class="manuscript-context-text">${comment.full_context.replace(/>>>/g, '<mark class="highlighted-line">&gt;&gt;&gt;</mark>')}</pre>
                                     ` : ''}
                                 </div>
                             ` : fullContext ? `
                                 <div class="context-box">
-                                    <p class="context-label"><i class="fas fa-info-circle"></i> Additional Context:</p>
+                                    <p class="context-label"><i class="fas fa-info-circle"></i> Additional context:</p>
                                     <p class="context-text">${fullContext}</p>
                                 </div>
                             ` : ''}
 
                             ${comment.draft_response ? `
                                 <div class="draft-response-box">
-                                    <p class="draft-response-label"><i class="fas fa-pen"></i> Your Current Draft Response:</p>
+                                    <p class="draft-response-label"><i class="fas fa-pen"></i> Current draft response:</p>
                                     <p class="draft-response-text">${comment.draft_response}</p>
                                 </div>
                             ` : ''}
@@ -5635,7 +5635,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                         <div class="dynamic-experts-header">
                             <div class="dynamic-experts-title">
                                 <i class="fas fa-brain"></i>
-                                AI-Generated Expert Panel
+                                AI-generated expert panel
                             </div>
                             <span class="dynamic-experts-badge">${dynamicExperts.length} experts</span>
                         </div>
@@ -5733,7 +5733,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                         <div class="no-expert-message">
                             <p>No expert analysis generated yet for this comment.</p>
                             <button onclick="regenerateExpertForComment('${commentId}')" class="btn btn-sm btn-primary mt-2">
-                                <i class="fas fa-wand-magic-sparkles"></i> Generate Expert Analysis
+                                <i class="fas fa-wand-magic-sparkles"></i> Generate expert analysis
                             </button>
                         </div>
                     `;
@@ -5768,7 +5768,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                             ${disc?.experts && disc.experts.length > 0 ? `
                                 <h4 class="discussion-experts-title">
                                     <i class="fas fa-users"></i>
-                                    Expert Panel Discussion (${disc.experts.length} expert${disc.experts.length > 1 ? 's' : ''})
+                                    Expert panel discussion (${disc.experts.length} expert${disc.experts.length > 1 ? 's' : ''})
                                 </h4>
                             ` : ''}
                             ${expertsHtml}
@@ -5824,7 +5824,7 @@ Use the "Generate Expert Analysis" button to create insights using OpenCode.
                     <div class="manuscript-banner-content">
                         <div class="manuscript-banner-main">
                             <h3 class="manuscript-banner-title">
-                                <i class="fas fa-microscope"></i> Expert Analysis
+                                <i class="fas fa-microscope"></i> Expert analysis
                             </h3>
                             <p class="manuscript-banner-field">AI-generated expert insights for ${allCommentIds.length} comments</p>
                         </div>
@@ -6198,7 +6198,7 @@ GUIDELINES:
             modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
             modal.innerHTML = `
                 <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
-                    <h3 class="font-bold text-lg mb-4">Regenerating Expert Analysis</h3>
+                    <h3 class="font-bold text-lg mb-4">Regenerating expert analysis</h3>
                     <div class="mb-4">
                         <div class="w-full bg-gray-200 rounded-full h-3">
                             <div id="regen-progress-bar" class="bg-emerald-600 h-3 rounded-full transition-all" style="width: 0%"></div>
@@ -6623,7 +6623,7 @@ Return ONLY a valid JSON object (no markdown, no explanation):
                 report += `**Reviewer Comment:** ${disc.reviewer_comment}\n\n`;
                 report += `**Category:** ${disc.category}\n\n`;
                 if (disc.experts && disc.experts.length > 0) {
-                    report += '**Expert Analysis:**\n';
+                    report += '**Expert analysis:**\n';
                     for (const e of disc.experts) {
                         report += `- ${e.name}: ${e.verdict}\n`;
                     }
@@ -6691,14 +6691,14 @@ Return ONLY a valid JSON object (no markdown, no explanation):
 
                 const prompt = `You are a productivity expert helping a researcher respond to peer review comments.
 
-ORDER these ${taskSummaries.length} tasks for OPTIMAL PRODUCTIVITY using research-backed strategies:
+Order these ${taskSummaries.length} tasks for optimal productivity:
 
-## PRODUCTIVITY PRINCIPLES TO APPLY:
-1. **Quick Wins First (2-3 tasks)**: Start with minor/easy tasks to build momentum and confidence
-2. **Peak Energy Tasks Next**: Major/high-priority items when motivation is established
-3. **Batch Similar Work**: Group related categories together (e.g., all Figure tasks, all Methods tasks)
-4. **Analysis Tasks Together**: Items requiring new analysis should be batched
-5. **End with Low Stakes**: Save low-priority minor items for the end when energy wanes
+## Principles:
+1. **Quick wins first (2-3 tasks)**: Start with minor/easy tasks to build momentum
+2. **High-energy tasks next**: Major/high-priority items while motivation is high
+3. **Batch similar work**: Group related categories together
+4. **Analysis tasks together**: Items requiring new analysis should be batched
+5. **End with low stakes**: Save low-priority minor items for the end
 
 ## TASKS TO ORDER:
 ${JSON.stringify(taskSummaries, null, 2)}
@@ -7300,7 +7300,7 @@ Return the complete ordered list as JSON:`;
             }
 
             // Show terminal modal
-            showTerminalModal('AI Task Optimization');
+            showTerminalModal('AI task optimization');
 
             try {
                 terminalLog('Starting AI task optimization...', 'info');
@@ -7937,7 +7937,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                                 <div class="rb-icon-box purple">
                                     <i class="fas fa-brain"></i>
                                 </div>
-                                Expert Analysis
+                                Expert analysis
                             </label>
                             <button onclick="regenerateExpertInModal('${commentId}')" class="btn btn-sm btn-ghost" title="Regenerate" id="modal-regenerate-btn">
                                 <i class="fas fa-sync-alt"></i>
@@ -7962,7 +7962,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                             ${recommendedResponse ? `
                                 <div class="rb-recommended-response">
                                     <div class="rb-rec-header">
-                                        <span class="rb-rec-label"><i class="fas fa-magic"></i> AI Recommended Response</span>
+                                        <span class="rb-rec-label"><i class="fas fa-magic"></i> AI recommended response</span>
                                     <button onclick="useRecommendedInModal('${commentId}')" class="btn btn-sm btn-success">
                                         <i class="fas fa-check"></i> Use This
                                     </button>
@@ -7987,7 +7987,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                                 <div class="rb-icon-box purple">
                                     <i class="fas fa-brain"></i>
                                 </div>
-                                Expert Analysis
+                                Expert analysis
                             </label>
                         </div>
                         <div id="modal-expert-loading" class="rb-loading-overlay hidden">
@@ -7997,7 +7997,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                         <div id="modal-expert-content">
                             <p class="rb-empty-text">No expert analysis available.</p>
                             <button onclick="regenerateExpertInModal('${commentId}')" class="btn btn-sm btn-primary" style="margin-top: var(--sp-2);" id="modal-generate-btn">
-                                <i class="fas fa-wand-magic-sparkles"></i> Generate Expert Analysis
+                                <i class="fas fa-wand-magic-sparkles"></i> Generate expert analysis
                             </button>
                         </div>
                     </div>
@@ -8044,7 +8044,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                     <div class="rb-comment-text">${comment.original_text}</div>
                     ${comment.location && comment.full_context ? `
                     <div class="manuscript-context-box" style="margin-top: var(--sp-3);">
-                        <p class="manuscript-context-label"><i class="fas fa-file-alt"></i> Manuscript Reference: <strong>${comment.location}</strong></p>
+                        <p class="manuscript-context-label"><i class="fas fa-file-alt"></i> Manuscript reference: <strong>${comment.location}</strong></p>
                         <pre class="manuscript-context-text">${comment.full_context.replace(/>>>/g, '<mark class="highlighted-line">&gt;&gt;&gt;</mark>')}</pre>
                     </div>
                     ` : ''}
@@ -8072,7 +8072,7 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                             </div>
                         </div>
 
-                        <!-- Expert Analysis -->
+                        <!-- Expert analysis -->
                         ${expertAnalysisHtml}
 
                         <!-- Actions Taken Summary -->
