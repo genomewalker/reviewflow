@@ -1184,6 +1184,27 @@ Ask me anything about this comment, or request a draft response.`;
         let extractedCommentsData = [];
         let reExtractReviewerId = null;
 
+        // Normalize reviewer ID to standard format (R1, R2, R3, etc.)
+        function normalizeReviewerId(id) {
+            if (!id) return 'R1';
+            // Already in correct format
+            if (/^R\d+$/i.test(id)) return id.toUpperCase();
+            // Convert "referee-1", "referee-2", etc. to "R1", "R2"
+            const match = id.match(/referee[- _]?#?(\d+)/i);
+            if (match) return `R${match[1]}`;
+            // Convert "Referee #1 (Remarks...)" to "R1"
+            const nameMatch = id.match(/referee\s*#?(\d+)/i);
+            if (nameMatch) return `R${nameMatch[1]}`;
+            // Default: return as-is but uppercase
+            return id.toUpperCase();
+        }
+
+        // Extract reviewer number from name like "Referee #3 (Remarks to the Author)"
+        function extractReviewerNumber(name) {
+            const match = name.match(/#(\d+)/);
+            return match ? match[1] : null;
+        }
+
         function openImportReviewsModal() {
             document.getElementById('import-reviews-modal').classList.remove('hidden');
             importCurrentStep = 1;
@@ -1323,7 +1344,8 @@ Ask me anything about this comment, or request a draft response.`;
 
         async function extractReviewComments() {
             let rawText = document.getElementById('raw-reviews-input').value.trim();
-            const reviewerId = document.getElementById('reviewer-id-input').value.trim() || 'R1';
+            const rawReviewerId = document.getElementById('reviewer-id-input').value.trim() || 'R1';
+            const reviewerId = normalizeReviewerId(rawReviewerId);  // Normalize to R# format
             const reviewerName = document.getElementById('reviewer-name-input').value.trim() || 'Referee #1';
 
             if (!rawText) {
@@ -1516,6 +1538,19 @@ Number sequentially: ${reviewerId}-1, ${reviewerId}-2, etc.`;
                     hideOpenCodeLoading('extract-comments', { success: false, message: 'Could not parse JSON from response' });
                     throw new Error('Could not parse JSON from response');
                 }
+
+                // Normalize reviewer ID to R# format
+                if (extracted.reviewer) {
+                    extracted.reviewer.id = normalizeReviewerId(extracted.reviewer.id || reviewerId);
+                }
+                // Normalize comment IDs to match reviewer ID format
+                if (extracted.comments) {
+                    const baseId = extracted.reviewer?.id || normalizeReviewerId(reviewerId);
+                    extracted.comments.forEach((c, i) => {
+                        c.id = `${baseId}-${i + 1}`;
+                    });
+                }
+
                 // Store the original document text for collaboration export
                 extracted.original_document = rawText;
                 extractedCommentsData = extracted;
@@ -2789,8 +2824,10 @@ Before responding, verify you have:
             // Open import modal and pre-populate with existing data
             openImportReviewsModal();
 
-            // Set the reviewer info
-            document.getElementById('reviewer-id-input').value = reviewer.id;
+            // Set the reviewer info - normalize ID to R# format
+            const reviewerNum = extractReviewerNumber(reviewer.name);
+            const normalizedId = reviewerNum ? `R${reviewerNum}` : normalizeReviewerId(reviewer.id);
+            document.getElementById('reviewer-id-input').value = normalizedId;
             document.getElementById('reviewer-name-input').value = reviewer.name;
 
             const rawInput = document.getElementById('raw-reviews-input');
@@ -5593,6 +5630,9 @@ Use the "Generate expert analysis" button to create insights using OpenCode.
                             <button onclick="regenerateExpertForComment('${comment.id}')" class="btn btn-sm btn-ghost" title="Regenerate">
                                 <i class="fas fa-wand-magic-sparkles"></i>
                             </button>
+                            <button onclick="deleteComment('${comment.reviewerId}', '${comment.id}')" class="btn btn-sm btn-ghost btn-danger-hover" title="Delete comment">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                         <div class="comment-main-actions">
                             ${recommendedResponse ? `
@@ -8381,6 +8421,57 @@ IMPORTANT: Include ALL ${taskSummaries.length} task IDs in your JSON output. Sta
                     setView(currentView);
                     scheduleAutoSave(); // Auto-save to database after status change
                 }
+            }
+        }
+
+        // Delete a comment permanently
+        async function deleteComment(reviewerId, commentId) {
+            if (!confirm(`Delete comment ${commentId}? This cannot be undone.`)) {
+                return;
+            }
+
+            const reviewer = reviewData.reviewers.find(r => r.id === reviewerId);
+            if (!reviewer) {
+                showNotification('Reviewer not found', 'error');
+                return;
+            }
+
+            const commentIndex = reviewer.comments.findIndex(c => c.id === commentId);
+            if (commentIndex === -1) {
+                showNotification('Comment not found', 'error');
+                return;
+            }
+
+            try {
+                // Delete from server if we have a paper ID
+                if (currentPaperId) {
+                    const response = await fetch(`${API_BASE}/papers/${currentPaperId}/comments/${encodeURIComponent(commentId)}`, {
+                        method: 'DELETE'
+                    });
+                    const result = await response.json();
+                    if (!result.success) {
+                        throw new Error(result.error || 'Failed to delete from server');
+                    }
+                }
+
+                // Remove from local data
+                reviewer.comments.splice(commentIndex, 1);
+
+                // Also remove from expert discussions cache
+                if (expertDiscussions?.expert_discussions) {
+                    const prefixedKey = currentPaperId ? `${currentPaperId}_${commentId}` : commentId;
+                    delete expertDiscussions.expert_discussions[prefixedKey];
+                    delete expertDiscussions.expert_discussions[commentId];
+                }
+
+                // Update UI
+                updateSidebar();
+                setView(currentView);
+                showNotification(`Deleted ${commentId}`, 'success');
+
+            } catch (e) {
+                console.error('Delete comment error:', e);
+                showNotification(`Failed to delete: ${e.message}`, 'error');
             }
         }
 

@@ -2080,6 +2080,11 @@ a.comment-id:hover,
     background: var(--paper-warm);
 }
 
+.btn-danger-hover:hover {
+    color: #dc2626;
+    background: #fef2f2;
+}
+
 .btn-favorite-active {
     background: var(--rust-bg);
     color: var(--rust);

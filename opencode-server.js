@@ -6742,6 +6742,40 @@ except Exception as e:
             return;
         }
 
+        // DELETE /papers/:id/comments/:commentId - delete a single comment
+        const deleteCommentMatch = req.url.match(/^\/papers\/([^/]+)\/comments\/([^/]+)$/);
+        if (req.method === 'DELETE' && deleteCommentMatch) {
+            const paperId = deleteCommentMatch[1];
+            const commentId = decodeURIComponent(deleteCommentMatch[2]);
+            let paperDb = null;
+            try {
+                const dbPath = path.join(PROJECT_FOLDER || BASE_DIR, 'data', 'review_platform.db');
+                paperDb = new Database(dbPath);
+
+                // Delete related data first (foreign key constraints)
+                paperDb.prepare('DELETE FROM expert_discussions WHERE comment_id = ?').run(commentId);
+                paperDb.prepare('DELETE FROM version_history WHERE comment_id = ?').run(commentId);
+                paperDb.prepare('DELETE FROM chat_history WHERE comment_id = ?').run(commentId);
+
+                // Delete the comment
+                const result = paperDb.prepare('DELETE FROM comments WHERE id = ? AND paper_id = ?').run(commentId, paperId);
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: result.changes > 0,
+                    deleted: result.changes,
+                    comment_id: commentId,
+                    paper_id: paperId
+                }));
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ success: false, error: e.message }));
+            } finally {
+                if (paperDb) paperDb.close();
+            }
+            return;
+        }
+
         // POST /db/expert - save expert discussion for a comment
         if (req.method === 'POST' && req.url === '/db/expert') {
             let body = '';
