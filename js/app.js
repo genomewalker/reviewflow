@@ -1333,13 +1333,32 @@ If addressed by existing → SKIP
             }
 
             // Build reviewer section instruction for re-extraction mode
+            // Extract the reviewer number from the name (e.g., "Referee #3 (Remarks to the Author)" -> "3")
+            const reviewerNumber = reviewerName.match(/#(\d+)/)?.[1] || '';
             const reviewerSectionInstruction = reExtractReviewerId ? `
-## CRITICAL: EXTRACT FROM SPECIFIC REVIEWER ONLY
-The document contains comments from MULTIPLE reviewers. You MUST:
-1. ONLY extract comments from the section belonging to "${reviewerName}"
-2. Look for headers like "Referee #3", "Reviewer 3", "${reviewerName}", or similar
-3. COMPLETELY IGNORE all other reviewers' sections (Referee #1, #2, #4, etc.)
-4. If you cannot identify the correct reviewer section, extract NOTHING
+## CRITICAL CONSTRAINT - EXTRACT ONLY FROM REVIEWER #${reviewerNumber} SECTION
+
+### STRICT SECTION BOUNDARIES:
+The document contains multiple reviewer sections in order: Referee #1, Referee #2, Referee #3, Referee #4, etc.
+
+**Your ONLY extraction zone is between these two markers:**
+- START MARKER: "Referee #${reviewerNumber} (Remarks to the Author):"
+- END MARKER: "Referee #${reviewerNumber} (Remarks on code availability)" OR "Referee #${parseInt(reviewerNumber) + 1}"
+
+**CRITICAL - IGNORE ALL OTHER SECTIONS:**
+${parseInt(reviewerNumber) > 1 ? `- IGNORE everything from Referee #1 through Referee #${parseInt(reviewerNumber) - 1} (they appear BEFORE your section)` : ''}
+- IGNORE everything from Referee #${parseInt(reviewerNumber) + 1} onwards (they appear AFTER your section)
+- IGNORE "Remarks on code availability" sections (those are separate)
+
+### VALIDATION - ASK YOURSELF:
+"Does this text appear AFTER 'Referee #${reviewerNumber} (Remarks to the Author):' AND BEFORE 'Referee #${parseInt(reviewerNumber) + 1}' or 'Remarks on code availability'?"
+- If YES → Extract it
+- If NO or UNCERTAIN → DO NOT EXTRACT
+
+### COMMON MISTAKES TO AVOID:
+- Content about "tip dating" or "Bayesian phylogenetic" analysis is from Referee #1, NOT #${reviewerNumber}
+- Content about "time-traveller" authentication/validation is from Referee #1, NOT #${reviewerNumber}
+- If unsure which section content belongs to, DO NOT INCLUDE IT
 
 ` : '';
 
